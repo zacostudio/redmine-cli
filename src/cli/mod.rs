@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand};
 pub mod activities;
 pub mod attachments;
 pub mod categories;
+pub mod config_cmd;
 pub mod enums;
 pub mod issues;
 pub mod projects;
@@ -59,9 +60,19 @@ pub enum Command {
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
+    /// Manage CLI configuration (custom field aliases).
+    #[command(subcommand)]
+    Config(config_cmd::ConfigCommand),
 }
 
 pub fn run(cli: Cli) {
+    let config_path_override = cli.config.clone();
+
+    // config 서브커맨드는 Redmine 자격증명 없이 동작한다.
+    if let Command::Config(sub) = cli.command {
+        return config_cmd::handle(sub, config_path_override);
+    }
+
     let overrides = CliOverrides {
         server_url: cli.server_url,
         api_token: cli.api_token,
@@ -91,5 +102,6 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Trackers => enums::trackers(client),
         Command::Priorities => enums::priorities(client),
         Command::Attachment(sub) => attachments::handle(sub, client),
+        Command::Config(_) => unreachable!("handled in run() before client setup"),
     }
 }

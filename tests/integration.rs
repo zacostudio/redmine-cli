@@ -4,6 +4,8 @@ use serde_json::Value;
 use wiremock::matchers::{header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use assert_cmd::Command as AssertCommand;
+
 #[tokio::test(flavor = "current_thread")]
 async fn issues_search_returns_json() {
     let server = MockServer::start().await;
@@ -65,4 +67,84 @@ async fn issue_get_by_id_returns_full() {
     let v: Value = serde_json::from_str(stdout.trim()).unwrap();
     assert_eq!(v["id"], 42);
     assert_eq!(v["subject"], "answer");
+}
+
+#[test]
+fn config_alias_round_trip() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.toml");
+
+    // initial list — empty
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg_path.to_str().unwrap(),
+            "config",
+            "alias",
+            "list",
+        ])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(v["aliases"].as_object().unwrap().is_empty());
+
+    // set
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg_path.to_str().unwrap(),
+            "config",
+            "alias",
+            "set",
+            "state",
+            "7",
+        ])
+        .assert()
+        .success();
+
+    // list — now has state=7
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg_path.to_str().unwrap(),
+            "config",
+            "alias",
+            "list",
+        ])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(v["aliases"]["state"], 7);
+
+    // remove
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg_path.to_str().unwrap(),
+            "config",
+            "alias",
+            "remove",
+            "state",
+        ])
+        .assert()
+        .success();
+
+    // list — empty again
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg_path.to_str().unwrap(),
+            "config",
+            "alias",
+            "list",
+        ])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(v["aliases"].as_object().unwrap().is_empty());
 }

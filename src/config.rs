@@ -1,14 +1,14 @@
 // flag > env > toml 우선순위로 Redmine 설정을 머지한다.
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, Default, Deserialize)]
-struct FileConfig {
-    server_url: Option<String>,
-    api_token: Option<String>,
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct FileConfig {
+    pub server_url: Option<String>,
+    pub api_token: Option<String>,
     #[serde(default)]
-    custom_fields: HashMap<String, u64>,
+    pub custom_fields: HashMap<String, u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +75,28 @@ fn load_file(explicit: Option<PathBuf>) -> Result<FileConfig, ConfigError> {
     let text =
         std::fs::read_to_string(&path).map_err(|e| ConfigError::Io(path.clone(), e.to_string()))?;
     toml::from_str::<FileConfig>(&text).map_err(|e| ConfigError::Parse(path, e.to_string()))
+}
+
+/// 외부에서 사용 가능한 형태로 config.toml 경로를 해석한다.
+pub fn resolve_path(explicit: Option<PathBuf>) -> Option<PathBuf> {
+    explicit.or_else(default_config_path)
+}
+
+/// config.toml 을 읽어 들이거나 없으면 빈 구조체를 돌려준다.
+pub fn load_or_empty(path: Option<PathBuf>) -> Result<FileConfig, ConfigError> {
+    load_file(path)
+}
+
+/// FileConfig 를 config.toml 형식으로 저장한다. 부모 디렉터리는 필요 시 생성한다.
+pub fn save(path: &std::path::Path, file: &FileConfig) -> Result<(), ConfigError> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| ConfigError::Io(parent.to_path_buf(), e.to_string()))?;
+    }
+    let text =
+        toml::to_string(file).map_err(|e| ConfigError::Parse(path.to_path_buf(), e.to_string()))?;
+    std::fs::write(path, text).map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
+    Ok(())
 }
 
 /// `--custom-field` 입력(`id=value` 또는 `alias=value`)을 (cf_id, value) 로 분해한다.

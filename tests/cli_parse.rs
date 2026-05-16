@@ -82,3 +82,41 @@ fn parses_time_entry_create() {
         _ => panic!("expected TimeEntry::Create"),
     }
 }
+
+#[test]
+fn parses_config_alias_list() {
+    let cli = parse(&["config", "alias", "list"]);
+    match cli.command {
+        Command::Config(redmine_cli::cli::config_cmd::ConfigCommand::Alias(
+            redmine_cli::cli::config_cmd::AliasCommand::List,
+        )) => {}
+        _ => panic!("expected Config::Alias::List"),
+    }
+}
+
+#[test]
+fn parses_config_alias_set() {
+    let cli = parse(&["config", "alias", "set", "state", "7"]);
+    match cli.command {
+        Command::Config(redmine_cli::cli::config_cmd::ConfigCommand::Alias(
+            redmine_cli::cli::config_cmd::AliasCommand::Set { name, id },
+        )) => {
+            assert_eq!(name, "state");
+            assert_eq!(id, 7);
+        }
+        _ => panic!("expected Config::Alias::Set"),
+    }
+}
+
+#[test]
+fn parses_config_alias_remove() {
+    let cli = parse(&["config", "alias", "remove", "state"]);
+    match cli.command {
+        Command::Config(redmine_cli::cli::config_cmd::ConfigCommand::Alias(
+            redmine_cli::cli::config_cmd::AliasCommand::Remove { name },
+        )) => {
+            assert_eq!(name, "state");
+        }
+        _ => panic!("expected Config::Alias::Remove"),
+    }
+}

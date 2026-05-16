@@ -47,6 +47,16 @@ redmine issue create --project myproj --subject "..." --description "..."
 redmine time-entry create --issue 1234 --hours 2.5 --comment "..."
 ```
 
+### Manage aliases
+
+```bash
+redmine config alias list
+redmine config alias set state 7
+redmine config alias remove state
+```
+
+Aliases are persisted to `~/.config/redmine-cli/config.toml`.
+
 See `redmine --help`.
 
 ## License
