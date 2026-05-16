@@ -22,6 +22,9 @@
 ### Security
 - HTTP 리다이렉트를 전체 차단 (`reqwest::redirect::Policy::none`). 잘못 설정된 `server_url` 이나 중간자 공격이 발생해도 `X-Redmine-API-Key` 가 외부 호스트로 따라가지 않는다. (936a0a1)
 - `config.toml` 을 Unix 에서 0600 권한으로 저장. 평문 API 토큰을 동일 호스트의 다른 사용자가 읽을 수 없도록 `OpenOptions::mode` 와 `set_permissions` 로 강등. (4fa2a9a)
+- `Cli`, `Config`, `FileConfig`, `CliOverrides` 의 `Debug` 출력에서 `api_token` 을 `<REDACTED>` 로 마스킹. `eprintln!("{:?}", ...)` 한 줄로 토큰이 stderr 에 새는 잠재 결함을 차단.
+- 프로젝트 identifier 13곳을 URL path 에 그대로 박던 동작을 `urlencoding::encode` 처리. `--project "foo/../admin"` 같은 입력으로 의도 외 endpoint 가 호출되는 path manipulation 가능성을 막는다.
+- `attachment download` 가 서버 응답의 `content_url` 을 그대로 GET 하기 전에 host/scheme/port 가 `server_url` 과 일치하는지 검증. 응답 조작이나 손상된 응답이 외부 URL 을 가리켜도 API 키가 외부로 따라가지 않는다.
 
 ## [0.2.0] - 2026-05-16
 ### Added

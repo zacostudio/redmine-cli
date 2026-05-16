@@ -26,7 +26,7 @@ use crate::client::RedmineClient;
 use crate::config::{self, CliOverrides, Config};
 use crate::output;
 
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(name = "redmine", version, about = "Standalone CLI for Redmine")]
 pub struct Cli {
     /// Override server URL (defaults to env REDMINE_URL or config file).
@@ -43,6 +43,18 @@ pub struct Cli {
 
     #[command(subcommand)]
     pub command: Command,
+}
+
+// 토큰이 우연히라도 `{:?}` 로 출력되지 않도록 Debug 를 직접 구현해서 redact 한다.
+impl std::fmt::Debug for Cli {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Cli")
+            .field("server_url", &self.server_url)
+            .field("api_token", &self.api_token.as_ref().map(|_| "<REDACTED>"))
+            .field("config", &self.config)
+            .field("command", &self.command)
+            .finish()
+    }
 }
 
 #[derive(Subcommand, Debug)]

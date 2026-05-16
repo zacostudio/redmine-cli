@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct FileConfig {
     pub server_url: Option<String>,
     pub api_token: Option<String>,
@@ -11,17 +11,47 @@ pub struct FileConfig {
     pub custom_fields: HashMap<String, u64>,
 }
 
-#[derive(Debug, Clone)]
+impl std::fmt::Debug for FileConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileConfig")
+            .field("server_url", &self.server_url)
+            .field("api_token", &self.api_token.as_ref().map(|_| "<REDACTED>"))
+            .field("custom_fields", &self.custom_fields)
+            .finish()
+    }
+}
+
+#[derive(Clone)]
 pub struct Config {
     pub server_url: String,
     pub api_token: String,
     pub cf_aliases: HashMap<String, u64>,
 }
 
+impl std::fmt::Debug for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Config")
+            .field("server_url", &self.server_url)
+            .field("api_token", &"<REDACTED>")
+            .field("cf_aliases", &self.cf_aliases)
+            .finish()
+    }
+}
+
 pub struct CliOverrides {
     pub server_url: Option<String>,
     pub api_token: Option<String>,
     pub config_path: Option<PathBuf>,
+}
+
+impl std::fmt::Debug for CliOverrides {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CliOverrides")
+            .field("server_url", &self.server_url)
+            .field("api_token", &self.api_token.as_ref().map(|_| "<REDACTED>"))
+            .field("config_path", &self.config_path)
+            .finish()
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

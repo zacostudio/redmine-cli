@@ -784,3 +784,46 @@ async fn issue_note_puts_journal() {
     let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
     assert_eq!(v["ok"], true);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn attachment_download_rejects_foreign_host() {
+    // 서버 응답의 content_url 이 외부 호스트를 가리키는 경우 다운로드를 거부해야 한다.
+    // 거부하지 않으면 X-Redmine-API-Key 가 외부 호스트로 따라간다.
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/attachments/1.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "attachment": {
+                "id": 1,
+                "filename": "evil.bin",
+                "content_url": "http://attacker.example.invalid/leak"
+            }
+        })))
+        .mount(&server)
+        .await;
+
+    let tmp = tempfile::tempdir().unwrap();
+    let out_path = tmp.path().join("out.bin");
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args([
+            "attachment",
+            "download",
+            "1",
+            "--output",
+            out_path.to_str().unwrap(),
+        ])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(assert.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("does not match server"),
+        "stderr should mention host mismatch, got: {stderr}"
+    );
+    assert!(
+        !out_path.exists(),
+        "output file must not be created when host check fails"
+    );
+}

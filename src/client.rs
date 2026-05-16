@@ -191,7 +191,10 @@ impl RedmineClient {
     }
 
     pub fn list_categories(&self, project_id: &str) -> Result<CategoriesResponse, ClientError> {
-        let path = format!("/projects/{}/issue_categories.json", project_id);
+        let path = format!(
+            "/projects/{}/issue_categories.json",
+            urlencoding::encode(project_id)
+        );
         self.get(&path, &[])
     }
 
@@ -293,6 +296,25 @@ impl RedmineClient {
         url: &str,
         output_path: &std::path::Path,
     ) -> Result<(), ClientError> {
+        // 서버 응답으로 받은 content_url 을 그대로 GET 하기 전에 host/port/scheme 가
+        // base_url 과 일치하는지 확인한다. 이상 응답(혹은 손상된 응답)이 외부 URL 을
+        // 가리키더라도 X-Redmine-API-Key 가 외부로 새지 않도록 한다.
+        let parsed = reqwest::Url::parse(url)
+            .map_err(|e| ClientError::Other(format!("invalid attachment url: {e}")))?;
+        let base = reqwest::Url::parse(&self.base_url)
+            .map_err(|e| ClientError::Other(format!("invalid base url: {e}")))?;
+        if parsed.scheme() != base.scheme()
+            || parsed.host_str() != base.host_str()
+            || parsed.port_or_known_default() != base.port_or_known_default()
+        {
+            return Err(ClientError::Other(format!(
+                "attachment url '{}://{}' does not match server '{}://{}'",
+                parsed.scheme(),
+                parsed.host_str().unwrap_or(""),
+                base.scheme(),
+                base.host_str().unwrap_or(""),
+            )));
+        }
         // 본문 전체를 메모리에 적재하지 않고 파일에 직접 흘려보낸다.
         let mut resp = self
             .client
@@ -382,7 +404,13 @@ impl RedmineClient {
     }
 
     pub fn list_versions(&self, project_id: &str) -> Result<VersionsResponse, ClientError> {
-        self.get(&format!("/projects/{}/versions.json", project_id), &[])
+        self.get(
+            &format!(
+                "/projects/{}/versions.json",
+                urlencoding::encode(project_id)
+            ),
+            &[],
+        )
     }
 
     pub fn get_version(&self, id: u64) -> Result<VersionResponse, ClientError> {
@@ -395,7 +423,10 @@ impl RedmineClient {
         payload: serde_json::Value,
     ) -> Result<VersionResponse, ClientError> {
         self.post(
-            &format!("/projects/{}/versions.json", project_id),
+            &format!(
+                "/projects/{}/versions.json",
+                urlencoding::encode(project_id)
+            ),
             &serde_json::json!({ "version": payload }),
         )
     }
@@ -412,7 +443,13 @@ impl RedmineClient {
     }
 
     pub fn list_memberships(&self, project_id: &str) -> Result<MembershipsResponse, ClientError> {
-        self.get(&format!("/projects/{}/memberships.json", project_id), &[])
+        self.get(
+            &format!(
+                "/projects/{}/memberships.json",
+                urlencoding::encode(project_id)
+            ),
+            &[],
+        )
     }
 
     pub fn get_membership(&self, id: u64) -> Result<MembershipResponse, ClientError> {
@@ -425,7 +462,10 @@ impl RedmineClient {
         payload: serde_json::Value,
     ) -> Result<MembershipResponse, ClientError> {
         self.post(
-            &format!("/projects/{}/memberships.json", project_id),
+            &format!(
+                "/projects/{}/memberships.json",
+                urlencoding::encode(project_id)
+            ),
             &serde_json::json!({ "membership": payload }),
         )
     }
@@ -451,7 +491,7 @@ impl RedmineClient {
         params: &[(&str, String)],
     ) -> Result<NewsListResponse, ClientError> {
         let path = match project {
-            Some(p) => format!("/projects/{}/news.json", p),
+            Some(p) => format!("/projects/{}/news.json", urlencoding::encode(p)),
             None => "/news.json".to_string(),
         };
         self.get(&path, params)
@@ -467,13 +507,16 @@ impl RedmineClient {
         payload: serde_json::Value,
     ) -> Result<NewsResponse, ClientError> {
         self.post(
-            &format!("/projects/{}/news.json", project),
+            &format!("/projects/{}/news.json", urlencoding::encode(project)),
             &serde_json::json!({ "news": payload }),
         )
     }
 
     pub fn list_files(&self, project: &str) -> Result<FilesResponse, ClientError> {
-        self.get(&format!("/projects/{}/files.json", project), &[])
+        self.get(
+            &format!("/projects/{}/files.json", urlencoding::encode(project)),
+            &[],
+        )
     }
 
     pub fn attach_file_to_project(
@@ -482,7 +525,7 @@ impl RedmineClient {
         payload: serde_json::Value,
     ) -> Result<(), ClientError> {
         self.post_no_content(
-            &format!("/projects/{}/files.json", project),
+            &format!("/projects/{}/files.json", urlencoding::encode(project)),
             &serde_json::json!({ "file": payload }),
         )
     }
@@ -492,7 +535,10 @@ impl RedmineClient {
     }
 
     pub fn list_wiki_pages(&self, project: &str) -> Result<WikiIndexResponse, ClientError> {
-        self.get(&format!("/projects/{}/wiki/index.json", project), &[])
+        self.get(
+            &format!("/projects/{}/wiki/index.json", urlencoding::encode(project)),
+            &[],
+        )
     }
 
     pub fn get_wiki_page(
@@ -500,9 +546,12 @@ impl RedmineClient {
         project: &str,
         title: &str,
     ) -> Result<WikiPageResponse, ClientError> {
-        let encoded = urlencoding::encode(title);
         self.get(
-            &format!("/projects/{}/wiki/{}.json", project, encoded),
+            &format!(
+                "/projects/{}/wiki/{}.json",
+                urlencoding::encode(project),
+                urlencoding::encode(title)
+            ),
             &[("include", "attachments".to_string())],
         )
     }
@@ -513,16 +562,22 @@ impl RedmineClient {
         title: &str,
         payload: serde_json::Value,
     ) -> Result<(), ClientError> {
-        let encoded = urlencoding::encode(title);
         self.put_no_content(
-            &format!("/projects/{}/wiki/{}.json", project, encoded),
+            &format!(
+                "/projects/{}/wiki/{}.json",
+                urlencoding::encode(project),
+                urlencoding::encode(title)
+            ),
             &serde_json::json!({ "wiki_page": payload }),
         )
     }
 
     pub fn delete_wiki_page(&self, project: &str, title: &str) -> Result<(), ClientError> {
-        let encoded = urlencoding::encode(title);
-        self.delete(&format!("/projects/{}/wiki/{}.json", project, encoded))
+        self.delete(&format!(
+            "/projects/{}/wiki/{}.json",
+            urlencoding::encode(project),
+            urlencoding::encode(title)
+        ))
     }
 
     pub fn list_groups(&self) -> Result<GroupsResponse, ClientError> {
