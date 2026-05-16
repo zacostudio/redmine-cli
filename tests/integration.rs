@@ -207,3 +207,43 @@ async fn document_categories_list_returns_json() {
     assert_eq!(v[0]["name"], "Uncategorized");
     assert_eq!(v[0]["is_default"], true);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn custom_fields_list_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/custom_fields.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "custom_fields": [
+                {
+                    "id": 7,
+                    "name": "Severity",
+                    "customized_type": "issue",
+                    "field_format": "list",
+                    "is_required": true,
+                    "is_filter": true,
+                    "multiple": false,
+                    "default_value": "Low",
+                    "visible": true,
+                    "possible_values": [{"value": "Low"}, {"value": "High"}]
+                }
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["custom-fields"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v[0]["id"], 7);
+    assert_eq!(v[0]["name"], "Severity");
+    assert_eq!(v[0]["customized_type"], "issue");
+    assert_eq!(v[0]["field_format"], "list");
+}

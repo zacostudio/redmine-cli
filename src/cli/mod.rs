@@ -5,6 +5,7 @@ pub mod activities;
 pub mod attachments;
 pub mod categories;
 pub mod config_cmd;
+pub mod custom_fields;
 pub mod enums;
 pub mod issues;
 pub mod projects;
@@ -63,6 +64,9 @@ pub enum Command {
     /// List document categories.
     #[command(name = "document-categories")]
     DocumentCategories,
+    /// List custom field definitions (admin only).
+    #[command(name = "custom-fields")]
+    CustomFields,
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -109,6 +113,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Priorities => enums::priorities(client),
         Command::Roles => roles::handle(client),
         Command::DocumentCategories => enums::document_categories(client),
+        Command::CustomFields => custom_fields::handle(client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

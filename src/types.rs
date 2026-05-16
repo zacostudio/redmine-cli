@@ -255,3 +255,24 @@ pub struct RedmineDocumentCategory {
     pub name: String,
     pub is_default: Option<bool>,
 }
+
+// ── Custom fields (metadata) ────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct CustomFieldsResponse {
+    pub custom_fields: Vec<RedmineCustomFieldMeta>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineCustomFieldMeta {
+    pub id: u64,
+    pub name: String,
+    pub customized_type: Option<String>,
+    pub field_format: Option<String>,
+    pub is_required: Option<bool>,
+    pub is_filter: Option<bool>,
+    pub multiple: Option<bool>,
+    pub default_value: Option<serde_json::Value>,
+    pub visible: Option<bool>,
+    pub possible_values: Option<serde_json::Value>,
+}

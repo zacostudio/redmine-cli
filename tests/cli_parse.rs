@@ -151,3 +151,9 @@ fn parses_document_categories() {
     let cli = parse(&["document-categories"]);
     assert!(matches!(cli.command, Command::DocumentCategories));
 }
+
+#[test]
+fn parses_custom_fields() {
+    let cli = parse(&["custom-fields"]);
+    assert!(matches!(cli.command, Command::CustomFields));
+}

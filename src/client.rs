@@ -294,4 +294,8 @@ impl RedmineClient {
     pub fn list_document_categories(&self) -> Result<DocumentCategoriesResponse, String> {
         self.get("/enumerations/document_categories.json", &[])
     }
+
+    pub fn list_custom_fields(&self) -> Result<CustomFieldsResponse, String> {
+        self.get("/custom_fields.json", &[])
+    }
 }
