@@ -46,25 +46,33 @@ if [[ ! -f "${FORMULA_PATH}" ]]; then
 fi
 
 echo "==> fetch sha256 sidecar files for ${TAG}"
-declare -A SHA
-for target in "${TARGETS[@]}"; do
-  url="${BASE_URL}/redmine-${TAG}-${target}.tar.gz.sha256"
+fetch_sha() {
+  local target="$1"
+  local url="${BASE_URL}/redmine-${TAG}-${target}.tar.gz.sha256"
+  local line hex
   line="$(curl -fsSL "$url")"
   hex="${line%% *}"
   if [[ ! "$hex" =~ ^[0-9a-f]{64}$ ]]; then
     echo "error: invalid sha256 from $url -> '$line'" >&2
     exit 1
   fi
-  SHA[$target]="$hex"
-  echo "    ${target}: ${hex}"
-done
+  echo "$hex"
+}
+
+SHA_ARM_MAC="$(fetch_sha aarch64-apple-darwin)"
+SHA_INTEL_MAC="$(fetch_sha x86_64-apple-darwin)"
+SHA_LINUX="$(fetch_sha x86_64-unknown-linux-gnu)"
+
+echo "    aarch64-apple-darwin: ${SHA_ARM_MAC}"
+echo "    x86_64-apple-darwin:  ${SHA_INTEL_MAC}"
+echo "    x86_64-unknown-linux: ${SHA_LINUX}"
 
 echo "==> rewrite Formula/redmine.rb"
 
 python3 - "$FORMULA_PATH" "$VERSION" \
-  "${SHA[aarch64-apple-darwin]}" \
-  "${SHA[x86_64-apple-darwin]}" \
-  "${SHA[x86_64-unknown-linux-gnu]}" <<'PY'
+  "$SHA_ARM_MAC" \
+  "$SHA_INTEL_MAC" \
+  "$SHA_LINUX" <<'PY'
 import re, sys, pathlib
 
 path = pathlib.Path(sys.argv[1])
