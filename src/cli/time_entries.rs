@@ -30,6 +30,11 @@ pub struct CreateArgs {
     pub spent_on: Option<String>,
     #[arg(long)]
     pub comment: Option<String>,
+    /// Print only the new time-entry ID followed by a newline, instead of the
+    /// full JSON. Same intent as `issue create --id-only` — eliminates the
+    /// parse-error class for callers that just need the ID for follow-up calls.
+    #[arg(long = "id-only", default_value_t = false)]
+    pub id_only: bool,
 }
 
 #[derive(Args, Debug)]
@@ -100,15 +105,19 @@ fn create(a: CreateArgs, client: &RedmineClient) {
     }
     match client.create_time_entry(Value::Object(payload)) {
         Ok(r) => {
-            let out = TimeEntryOut {
-                id: r.time_entry.id,
-                issue_id: r.time_entry.issue.map(|i| i.id),
-                hours: r.time_entry.hours,
-                activity: r.time_entry.activity.map(|x| x.name),
-                spent_on: r.time_entry.spent_on,
-                comments: r.time_entry.comments,
-            };
-            output::print_json(serde_json::to_value(&out).unwrap_or(json!({})));
+            if a.id_only {
+                println!("{}", r.time_entry.id);
+            } else {
+                let out = TimeEntryOut {
+                    id: r.time_entry.id,
+                    issue_id: r.time_entry.issue.map(|i| i.id),
+                    hours: r.time_entry.hours,
+                    activity: r.time_entry.activity.map(|x| x.name),
+                    spent_on: r.time_entry.spent_on,
+                    comments: r.time_entry.comments,
+                };
+                output::print_json(serde_json::to_value(&out).unwrap_or(json!({})));
+            }
         }
         Err(e) => output::print_error(&format!("redmine time-entry create: {e}")),
     }

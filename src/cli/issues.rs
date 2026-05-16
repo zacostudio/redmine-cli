@@ -242,6 +242,9 @@ pub struct IssueAddRelationArgs {
     pub to: u64,
     #[arg(long, default_value = "relates")]
     pub r#type: String,
+    /// Print only the new relation ID followed by a newline.
+    #[arg(long = "id-only", default_value_t = false)]
+    pub id_only: bool,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -289,12 +292,18 @@ pub fn handle_one(args: IssueArgs, client: &RedmineClient, cfg: &Config) {
             Err(e) => output::print_error(&format!("failed to get relations: {e}")),
         },
         Some(IssueSub::AddRelation(a)) => match client.create_relation(id, a.to, &a.r#type) {
-            Ok(resp) => output::print_json(json!({
-                "id": resp.relation.id,
-                "issue_id": resp.relation.issue_id,
-                "issue_to_id": resp.relation.issue_to_id,
-                "relation_type": resp.relation.relation_type,
-            })),
+            Ok(resp) => {
+                if a.id_only {
+                    println!("{}", resp.relation.id);
+                } else {
+                    output::print_json(json!({
+                        "id": resp.relation.id,
+                        "issue_id": resp.relation.issue_id,
+                        "issue_to_id": resp.relation.issue_to_id,
+                        "relation_type": resp.relation.relation_type,
+                    }));
+                }
+            }
             Err(e) => output::print_error(&format!("failed to add relation: {e}")),
         },
         Some(IssueSub::Watcher(IssueWatcherSub::Add(w))) => {

@@ -41,6 +41,9 @@ pub struct CreateArgs {
     pub description: Option<String>,
     #[arg(long)]
     pub summary: Option<String>,
+    /// Print only the new news ID followed by a newline.
+    #[arg(long = "id-only", default_value_t = false)]
+    pub id_only: bool,
 }
 
 pub fn handle(cmd: NewsCommand, client: &RedmineClient) {
@@ -94,7 +97,13 @@ fn create(a: CreateArgs, client: &RedmineClient) {
         payload.insert("summary".into(), json!(v));
     }
     match client.create_news(&a.project, Value::Object(payload)) {
-        Ok(r) => output::print_json(news_to_json(&r.news)),
+        Ok(r) => {
+            if a.id_only {
+                println!("{}", r.news.id);
+            } else {
+                output::print_json(news_to_json(&r.news));
+            }
+        }
         Err(e) => output::print_error(&format!("redmine news create: {e}")),
     }
 }

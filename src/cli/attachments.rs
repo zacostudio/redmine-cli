@@ -40,6 +40,12 @@ pub struct UploadArgs {
     pub file: PathBuf,
     #[arg(long)]
     pub description: Option<String>,
+    /// Print only the upload token followed by a newline. The token is the
+    /// only field a follow-up call (e.g. `issue update --uploads ...`) needs
+    /// from this command's output, so skipping the JSON wrapper lets shell
+    /// scripts do `token=$(redmine attachment upload ... --token-only)` safely.
+    #[arg(long = "token-only", default_value_t = false)]
+    pub token_only: bool,
 }
 
 #[derive(Args, Debug)]
@@ -115,7 +121,13 @@ fn upload(a: UploadArgs, client: &RedmineClient) {
             content_type,
             a.description.as_deref(),
         ) {
-            Ok(()) => output::print_json(json!({ "ok": true, "token": upload_resp.upload.token })),
+            Ok(()) => {
+                if a.token_only {
+                    println!("{}", upload_resp.upload.token);
+                } else {
+                    output::print_json(json!({ "ok": true, "token": upload_resp.upload.token }));
+                }
+            }
             Err(e) => output::print_error(&format!("failed to attach: {e}")),
         },
         Err(e) => output::print_error(&format!("upload failed: {e}")),

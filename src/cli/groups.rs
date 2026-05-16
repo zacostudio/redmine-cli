@@ -38,6 +38,9 @@ pub struct CreateArgs {
     /// Initial user ids. Repeat or comma-separate.
     #[arg(long = "user", value_delimiter = ',')]
     pub users: Vec<u64>,
+    /// Print only the new group ID followed by a newline.
+    #[arg(long = "id-only", default_value_t = false)]
+    pub id_only: bool,
 }
 
 #[derive(Args, Debug)]
@@ -102,7 +105,13 @@ fn create(a: CreateArgs, client: &RedmineClient) {
         payload.insert("user_ids".into(), json!(a.users));
     }
     match client.create_group(Value::Object(payload)) {
-        Ok(r) => output::print_json(group_to_json(&r.group)),
+        Ok(r) => {
+            if a.id_only {
+                println!("{}", r.group.id);
+            } else {
+                output::print_json(group_to_json(&r.group));
+            }
+        }
         Err(e) => output::print_error(&format!("redmine group create: {e}")),
     }
 }

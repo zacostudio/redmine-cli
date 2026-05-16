@@ -42,6 +42,9 @@ pub struct AddArgs {
     /// Role ids. Repeat or comma-separate.
     #[arg(long, value_delimiter = ',', required = true)]
     pub role: Vec<u64>,
+    /// Print only the new membership ID followed by a newline.
+    #[arg(long = "id-only", default_value_t = false)]
+    pub id_only: bool,
 }
 
 #[derive(Args, Debug)]
@@ -111,7 +114,13 @@ fn add(a: AddArgs, client: &RedmineClient) {
     payload.insert("role_ids".into(), json!(a.role));
 
     match client.create_membership(&a.project, Value::Object(payload)) {
-        Ok(r) => output::print_json(membership_to_json(&r.membership)),
+        Ok(r) => {
+            if a.id_only {
+                println!("{}", r.membership.id);
+            } else {
+                output::print_json(membership_to_json(&r.membership));
+            }
+        }
         Err(e) => output::print_error(&format!("redmine membership add: {e}")),
     }
 }

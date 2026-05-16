@@ -47,6 +47,9 @@ pub struct CreateArgs {
     pub sharing: Option<String>,
     #[arg(long = "wiki-page-title")]
     pub wiki_page_title: Option<String>,
+    /// Print only the new version ID followed by a newline.
+    #[arg(long = "id-only", default_value_t = false)]
+    pub id_only: bool,
 }
 
 #[derive(Args, Debug)]
@@ -132,7 +135,13 @@ fn create(a: CreateArgs, client: &RedmineClient) {
         payload.insert("wiki_page_title".into(), json!(v));
     }
     match client.create_version(&a.project, Value::Object(payload)) {
-        Ok(r) => output::print_json(version_to_json(&r.version)),
+        Ok(r) => {
+            if a.id_only {
+                println!("{}", r.version.id);
+            } else {
+                output::print_json(version_to_json(&r.version));
+            }
+        }
         Err(e) => output::print_error(&format!("redmine version create: {e}")),
     }
 }

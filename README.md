@@ -44,19 +44,37 @@ redmine projects
 redmine issues --project myproj --status 1
 redmine issue 1234
 redmine issue create --project myproj --subject "..." --description "..."
-
-# Print just the new issue ID — safe for shell scripting.
-id=$(redmine issue create --project myproj --subject "..." --id-only)
-
 redmine time-entry create --issue 1234 --hours 2.5 --comment "..."
 ```
 
-The default `issue create` output is the full JSON of the created issue
-(unwrapped — fields live at the top level, not under `{"issue": ...}`).
-Use `--id-only` when scripting: it bypasses JSON parsing entirely, so a
-broken `jq` / `python -c` pipeline on the caller side can no longer be
-mistaken for a failed create — which would otherwise tempt the caller to
-retry and produce a duplicate issue.
+### Scripting-safe creates (`--id-only` / `--token-only`)
+
+Single-resource commands (`issue create`, `issue 1234`, `issue update`,
+`time-entry create`, etc.) output the **unwrapped** resource JSON — the
+fields live at the top level, not under a `{"issue": ...}` wrapper. List
+commands wrap with their plural key (`{"issues": [...], "total_count": N}`).
+
+For destructive commands that produce a new resource, plain JSON parsing
+in shell scripts is fragile — a broken `jq` / `python -c` pipeline on the
+caller side has been mistaken for a failed create in practice, tempting
+the caller to retry and creating a duplicate. To eliminate that hazard,
+every resource-creating command exposes a stripped-output flag:
+
+```bash
+issue_id=$(redmine issue create --project myproj --subject "..." --id-only)
+te_id=$(redmine time-entry create --issue 1234 --hours 2.5 --id-only)
+relation_id=$(redmine issue 1234 add-relation --to 1235 --id-only)
+ver_id=$(redmine version create demo --name v2 --id-only)
+news_id=$(redmine news create demo --title "Release" --id-only)
+group_id=$(redmine group create --name QA --id-only)
+membership_id=$(redmine membership add demo --user 11 --role 4 --id-only)
+
+# Attachment upload returns a token (used by the follow-up issue update).
+token=$(redmine attachment upload --issue 1234 --file ./screenshot.png --token-only)
+```
+
+These flags print **only** the integer ID (or token string) followed by a
+newline — no JSON, no wrapper, nothing else to parse.
 
 ### Manage aliases
 

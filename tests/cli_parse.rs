@@ -374,3 +374,111 @@ fn parses_issue_note() {
         _ => panic!("expected Issue"),
     }
 }
+
+#[test]
+fn parses_time_entry_create_with_id_only() {
+    let cli = parse(&[
+        "time-entry",
+        "create",
+        "--issue",
+        "10",
+        "--hours",
+        "1.5",
+        "--id-only",
+    ]);
+    match cli.command {
+        Command::TimeEntry(redmine_cli::cli::time_entries::TimeEntryCommand::Create(a)) => {
+            assert!(a.id_only);
+        }
+        _ => panic!("expected TimeEntry::Create"),
+    }
+}
+
+#[test]
+fn parses_issue_add_relation_with_id_only() {
+    let cli = parse(&["issue", "10", "add-relation", "--to", "11", "--id-only"]);
+    match cli.command {
+        Command::Issue(a) => match a.sub {
+            Some(redmine_cli::cli::issues::IssueSub::AddRelation(r)) => {
+                assert_eq!(r.to, 11);
+                assert!(r.id_only);
+            }
+            _ => panic!("expected AddRelation"),
+        },
+        _ => panic!("expected Issue"),
+    }
+}
+
+#[test]
+fn parses_attachment_upload_with_token_only() {
+    let cli = parse(&[
+        "attachment",
+        "upload",
+        "--issue",
+        "10",
+        "--file",
+        "/tmp/x.bin",
+        "--token-only",
+    ]);
+    match cli.command {
+        Command::Attachment(redmine_cli::cli::attachments::AttachmentCommand::Upload(a)) => {
+            assert_eq!(a.issue, 10);
+            assert_eq!(a.file.as_os_str(), "/tmp/x.bin");
+            assert!(a.token_only);
+        }
+        _ => panic!("expected Attachment::Upload"),
+    }
+}
+
+#[test]
+fn parses_version_create_with_id_only() {
+    let cli = parse(&["version", "create", "demo", "--name", "v2", "--id-only"]);
+    match cli.command {
+        Command::Version(redmine_cli::cli::versions::VersionCommand::Create(a)) => {
+            assert!(a.id_only);
+        }
+        _ => panic!("expected Version::Create"),
+    }
+}
+
+#[test]
+fn parses_news_create_with_id_only() {
+    let cli = parse(&["news", "create", "demo", "--title", "hi", "--id-only"]);
+    match cli.command {
+        Command::News(redmine_cli::cli::news::NewsCommand::Create(a)) => {
+            assert!(a.id_only);
+        }
+        _ => panic!("expected News::Create"),
+    }
+}
+
+#[test]
+fn parses_group_create_with_id_only() {
+    let cli = parse(&["group", "create", "--name", "QA", "--id-only"]);
+    match cli.command {
+        Command::Group(redmine_cli::cli::groups::GroupCommand::Create(a)) => {
+            assert!(a.id_only);
+        }
+        _ => panic!("expected Group::Create"),
+    }
+}
+
+#[test]
+fn parses_membership_add_with_id_only() {
+    let cli = parse(&[
+        "membership",
+        "add",
+        "demo",
+        "--user",
+        "11",
+        "--role",
+        "4",
+        "--id-only",
+    ]);
+    match cli.command {
+        Command::Membership(redmine_cli::cli::memberships::MembershipCommand::Add(a)) => {
+            assert!(a.id_only);
+        }
+        _ => panic!("expected Membership::Add"),
+    }
+}
