@@ -324,10 +324,7 @@ pub fn handle_one(args: IssueArgs, client: &RedmineClient, cfg: &Config) {
             }
         }
         Some(IssueSub::Note(n)) => post_note(id, n, client),
-        None => match client.get_issue(
-            id,
-            &["journals", "attachments", "children", "relations"],
-        ) {
+        None => match client.get_issue(id, &["journals", "attachments", "children", "relations"]) {
             Ok(r) => output::print_json(serde_json::to_value(&r.issue).unwrap_or(json!({}))),
             Err(e) => output::print_error(&format!("redmine issue: {e}")),
         },

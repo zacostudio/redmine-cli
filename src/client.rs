@@ -66,7 +66,10 @@ impl RedmineClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().unwrap_or_default();
-            return Err(ClientError::Http { status: status.as_u16(), body });
+            return Err(ClientError::Http {
+                status: status.as_u16(),
+                body,
+            });
         }
         resp.json::<T>()
             .map_err(|e| ClientError::Other(format!("failed to parse response: {e}")))
@@ -87,7 +90,10 @@ impl RedmineClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().unwrap_or_default();
-            return Err(ClientError::Http { status: status.as_u16(), body });
+            return Err(ClientError::Http {
+                status: status.as_u16(),
+                body,
+            });
         }
         resp.json::<T>()
             .map_err(|e| ClientError::Other(format!("failed to parse response: {e}")))
@@ -104,7 +110,10 @@ impl RedmineClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().unwrap_or_default();
-            return Err(ClientError::Http { status: status.as_u16(), body });
+            return Err(ClientError::Http {
+                status: status.as_u16(),
+                body,
+            });
         }
         Ok(())
     }
@@ -120,7 +129,10 @@ impl RedmineClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().unwrap_or_default();
-            return Err(ClientError::Http { status: status.as_u16(), body });
+            return Err(ClientError::Http {
+                status: status.as_u16(),
+                body,
+            });
         }
         Ok(())
     }
@@ -135,7 +147,10 @@ impl RedmineClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().unwrap_or_default();
-            return Err(ClientError::Http { status: status.as_u16(), body });
+            return Err(ClientError::Http {
+                status: status.as_u16(),
+                body,
+            });
         }
         Ok(())
     }
@@ -222,8 +237,8 @@ impl RedmineClient {
             .unwrap_or("upload");
         // 파일 전체를 메모리에 읽지 않고 reqwest::blocking::Body 로 스트리밍한다.
         // sized body 가 필요하므로 metadata 로 길이를 미리 얻는다.
-        let file = std::fs::File::open(file_path)
-            .map_err(|e| format!("failed to open file: {e}"))?;
+        let file =
+            std::fs::File::open(file_path).map_err(|e| format!("failed to open file: {e}"))?;
         let len = file
             .metadata()
             .map_err(|e| format!("failed to stat file: {e}"))?
@@ -244,7 +259,10 @@ impl RedmineClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().unwrap_or_default();
-            return Err(ClientError::Http { status: status.as_u16(), body });
+            return Err(ClientError::Http {
+                status: status.as_u16(),
+                body,
+            });
         }
         resp.json::<UploadResponse>()
             .map_err(|e| ClientError::Other(format!("failed to parse upload response: {e}")))
@@ -283,10 +301,13 @@ impl RedmineClient {
             .map_err(|e| format!("download failed: {e}"))?;
         let status = resp.status();
         if !status.is_success() {
-            return Err(ClientError::Http { status: status.as_u16(), body: String::new() });
+            return Err(ClientError::Http {
+                status: status.as_u16(),
+                body: String::new(),
+            });
         }
-        let mut file = std::fs::File::create(output_path)
-            .map_err(|e| format!("write failed: {e}"))?;
+        let mut file =
+            std::fs::File::create(output_path).map_err(|e| format!("write failed: {e}"))?;
         resp.copy_to(&mut file)
             .map_err(|e| format!("write failed: {e}"))?;
         Ok(())
@@ -299,7 +320,11 @@ impl RedmineClient {
         self.get("/time_entries.json", params)
     }
 
-    pub fn update_time_entry(&self, id: u64, payload: serde_json::Value) -> Result<(), ClientError> {
+    pub fn update_time_entry(
+        &self,
+        id: u64,
+        payload: serde_json::Value,
+    ) -> Result<(), ClientError> {
         let body = serde_json::json!({ "time_entry": payload });
         self.put_no_content(&format!("/time_entries/{}.json", id), &body)
     }
@@ -387,10 +412,7 @@ impl RedmineClient {
     }
 
     pub fn list_memberships(&self, project_id: &str) -> Result<MembershipsResponse, ClientError> {
-        self.get(
-            &format!("/projects/{}/memberships.json", project_id),
-            &[],
-        )
+        self.get(&format!("/projects/{}/memberships.json", project_id), &[])
     }
 
     pub fn get_membership(&self, id: u64) -> Result<MembershipResponse, ClientError> {
@@ -408,7 +430,11 @@ impl RedmineClient {
         )
     }
 
-    pub fn update_membership(&self, id: u64, payload: serde_json::Value) -> Result<(), ClientError> {
+    pub fn update_membership(
+        &self,
+        id: u64,
+        payload: serde_json::Value,
+    ) -> Result<(), ClientError> {
         self.put_no_content(
             &format!("/memberships/{}.json", id),
             &serde_json::json!({ "membership": payload }),
@@ -511,10 +537,7 @@ impl RedmineClient {
     }
 
     pub fn create_group(&self, payload: serde_json::Value) -> Result<GroupResponse, ClientError> {
-        self.post(
-            "/groups.json",
-            &serde_json::json!({ "group": payload }),
-        )
+        self.post("/groups.json", &serde_json::json!({ "group": payload }))
     }
 
     pub fn update_group(&self, id: u64, payload: serde_json::Value) -> Result<(), ClientError> {
@@ -544,10 +567,7 @@ impl RedmineClient {
     }
 
     pub fn update_my_account(&self, payload: serde_json::Value) -> Result<(), ClientError> {
-        self.put_no_content(
-            "/my/account.json",
-            &serde_json::json!({ "user": payload }),
-        )
+        self.put_no_content("/my/account.json", &serde_json::json!({ "user": payload }))
     }
 
     pub fn add_issue_watcher(&self, issue_id: u64, user_id: u64) -> Result<(), ClientError> {

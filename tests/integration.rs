@@ -401,9 +401,7 @@ async fn membership_add_posts_and_returns_json() {
         .unwrap()
         .env("REDMINE_URL", server.uri())
         .env("REDMINE_API_TOKEN", "secret")
-        .args([
-            "membership", "add", "demo", "--user", "11", "--role", "4,5",
-        ])
+        .args(["membership", "add", "demo", "--user", "11", "--role", "4,5"])
         .assert()
         .success();
 
@@ -455,7 +453,15 @@ async fn news_create_posts_and_returns_json() {
         .unwrap()
         .env("REDMINE_URL", server.uri())
         .env("REDMINE_API_TOKEN", "secret")
-        .args(["news", "create", "demo", "--title", "Hello", "--description", "world"])
+        .args([
+            "news",
+            "create",
+            "demo",
+            "--title",
+            "Hello",
+            "--description",
+            "world",
+        ])
         .assert()
         .success();
 
@@ -603,7 +609,14 @@ async fn wiki_put_creates_or_updates() {
         .env("REDMINE_URL", server.uri())
         .env("REDMINE_API_TOKEN", "secret")
         .args([
-            "wiki", "update", "demo", "Roadmap", "--text", "hello", "--comments", "init",
+            "wiki",
+            "update",
+            "demo",
+            "Roadmap",
+            "--text",
+            "hello",
+            "--comments",
+            "init",
         ])
         .assert()
         .success();
@@ -756,7 +769,14 @@ async fn issue_note_puts_journal() {
         .unwrap()
         .env("REDMINE_URL", server.uri())
         .env("REDMINE_API_TOKEN", "secret")
-        .args(["issue", "42", "note", "--message", "looks good", "--private"])
+        .args([
+            "issue",
+            "42",
+            "note",
+            "--message",
+            "looks good",
+            "--private",
+        ])
         .assert()
         .success();
 

@@ -77,7 +77,13 @@ fn parses_issue_create_without_id() {
 #[test]
 fn parses_issue_create_with_id_only() {
     let cli = parse(&[
-        "issue", "create", "--project", "demo", "--subject", "hi", "--id-only",
+        "issue",
+        "create",
+        "--project",
+        "demo",
+        "--subject",
+        "hi",
+        "--id-only",
     ]);
     match cli.command {
         Command::Issue(a) => match a.sub {
@@ -184,7 +190,15 @@ fn parses_version_list() {
 
 #[test]
 fn parses_version_create() {
-    let cli = parse(&["version", "create", "demo", "--name", "v2", "--due-date", "2026-12-31"]);
+    let cli = parse(&[
+        "version",
+        "create",
+        "demo",
+        "--name",
+        "v2",
+        "--due-date",
+        "2026-12-31",
+    ]);
     match cli.command {
         Command::Version(redmine_cli::cli::versions::VersionCommand::Create(a)) => {
             assert_eq!(a.project, "demo");
@@ -198,7 +212,15 @@ fn parses_version_create() {
 #[test]
 fn parses_membership_add_with_multi_role() {
     let cli = parse(&[
-        "membership", "add", "demo", "--user", "11", "--role", "4,5", "--role", "6",
+        "membership",
+        "add",
+        "demo",
+        "--user",
+        "11",
+        "--role",
+        "4,5",
+        "--role",
+        "6",
     ]);
     match cli.command {
         Command::Membership(redmine_cli::cli::memberships::MembershipCommand::Add(a)) => {
@@ -259,7 +281,13 @@ fn parses_file_list() {
 #[test]
 fn parses_file_upload() {
     let cli = parse(&[
-        "file", "upload", "demo", "--path", "/tmp/x.bin", "--description", "d",
+        "file",
+        "upload",
+        "demo",
+        "--path",
+        "/tmp/x.bin",
+        "--description",
+        "d",
     ]);
     match cli.command {
         Command::File(redmine_cli::cli::files::FileCommand::Upload(a)) => {
@@ -292,7 +320,14 @@ fn parses_wiki_show() {
 #[test]
 fn parses_wiki_update_with_text() {
     let cli = parse(&[
-        "wiki", "update", "demo", "Roadmap", "--text", "hi", "--comments", "x",
+        "wiki",
+        "update",
+        "demo",
+        "Roadmap",
+        "--text",
+        "hi",
+        "--comments",
+        "x",
     ]);
     match cli.command {
         Command::Wiki(redmine_cli::cli::wiki::WikiCommand::Update(a)) => {
