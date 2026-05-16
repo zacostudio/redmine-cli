@@ -400,3 +400,55 @@ async fn membership_add_posts_and_returns_json() {
     assert_eq!(v["id"], 9);
     assert_eq!(v["roles"].as_array().unwrap().len(), 2);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn news_list_global_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/news.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "news": [
+                {"id": 3, "project": {"id": 1, "name": "demo"}, "title": "Release", "summary": "v1"}
+            ],
+            "total_count": 1
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["news", "list"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["news"][0]["title"], "Release");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn news_create_posts_and_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/projects/demo/news.json"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(serde_json::json!({
+            "news": {"id": 8, "project": {"id": 1, "name": "demo"}, "title": "Hello", "description": "world"}
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["news", "create", "demo", "--title", "Hello", "--description", "world"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["id"], 8);
+    assert_eq!(v["description"], "world");
+}

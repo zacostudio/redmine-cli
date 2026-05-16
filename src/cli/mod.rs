@@ -9,6 +9,7 @@ pub mod custom_fields;
 pub mod enums;
 pub mod issues;
 pub mod memberships;
+pub mod news;
 pub mod projects;
 pub mod roles;
 pub mod search;
@@ -78,6 +79,9 @@ pub enum Command {
     /// Project memberships: list/show/add/update/remove.
     #[command(subcommand)]
     Membership(memberships::MembershipCommand),
+    /// News: list/show/create.
+    #[command(subcommand)]
+    News(news::NewsCommand),
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -128,6 +132,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Search(a) => search::handle(a, client),
         Command::Version(sub) => versions::handle(sub, client),
         Command::Membership(sub) => memberships::handle(sub, client),
+        Command::News(sub) => news::handle(sub, client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

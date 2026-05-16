@@ -365,4 +365,31 @@ impl RedmineClient {
     pub fn delete_membership(&self, id: u64) -> Result<(), String> {
         self.delete(&format!("/memberships/{}.json", id))
     }
+
+    pub fn list_news(
+        &self,
+        project: Option<&str>,
+        params: &[(&str, String)],
+    ) -> Result<NewsListResponse, String> {
+        let path = match project {
+            Some(p) => format!("/projects/{}/news.json", p),
+            None => "/news.json".to_string(),
+        };
+        self.get(&path, params)
+    }
+
+    pub fn get_news(&self, id: u64) -> Result<NewsResponse, String> {
+        self.get(&format!("/news/{}.json", id), &[])
+    }
+
+    pub fn create_news(
+        &self,
+        project: &str,
+        payload: serde_json::Value,
+    ) -> Result<NewsResponse, String> {
+        self.post(
+            &format!("/projects/{}/news.json", project),
+            &serde_json::json!({ "news": payload }),
+        )
+    }
 }

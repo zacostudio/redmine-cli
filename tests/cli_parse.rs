@@ -220,3 +220,27 @@ fn parses_membership_remove() {
         _ => panic!("expected Membership::Remove"),
     }
 }
+
+#[test]
+fn parses_news_list_with_project() {
+    let cli = parse(&["news", "list", "--project", "demo", "--limit", "5"]);
+    match cli.command {
+        Command::News(redmine_cli::cli::news::NewsCommand::List(a)) => {
+            assert_eq!(a.project.as_deref(), Some("demo"));
+            assert_eq!(a.limit, 5);
+        }
+        _ => panic!("expected News::List"),
+    }
+}
+
+#[test]
+fn parses_news_create() {
+    let cli = parse(&["news", "create", "demo", "--title", "Hi"]);
+    match cli.command {
+        Command::News(redmine_cli::cli::news::NewsCommand::Create(a)) => {
+            assert_eq!(a.project, "demo");
+            assert_eq!(a.title, "Hi");
+        }
+        _ => panic!("expected News::Create"),
+    }
+}

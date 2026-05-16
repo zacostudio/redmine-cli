@@ -283,6 +283,30 @@ pub struct VersionResponse {
     pub version: RedmineVersion,
 }
 
+// ── News ────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineNews {
+    pub id: u64,
+    pub project: Option<IdName>,
+    pub author: Option<IdName>,
+    pub title: String,
+    pub summary: Option<String>,
+    pub description: Option<String>,
+    pub created_on: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct NewsListResponse {
+    pub news: Vec<RedmineNews>,
+    pub total_count: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct NewsResponse {
+    pub news: RedmineNews,
+}
+
 // ── Memberships ─────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
