@@ -461,4 +461,44 @@ impl RedmineClient {
         let encoded = urlencoding::encode(title);
         self.delete(&format!("/projects/{}/wiki/{}.json", project, encoded))
     }
+
+    pub fn list_groups(&self) -> Result<GroupsResponse, String> {
+        self.get("/groups.json", &[])
+    }
+
+    pub fn get_group(&self, id: u64) -> Result<GroupResponse, String> {
+        self.get(
+            &format!("/groups/{}.json", id),
+            &[("include", "users,memberships".to_string())],
+        )
+    }
+
+    pub fn create_group(&self, payload: serde_json::Value) -> Result<GroupResponse, String> {
+        self.post(
+            "/groups.json",
+            &serde_json::json!({ "group": payload }),
+        )
+    }
+
+    pub fn update_group(&self, id: u64, payload: serde_json::Value) -> Result<(), String> {
+        self.put_no_content(
+            &format!("/groups/{}.json", id),
+            &serde_json::json!({ "group": payload }),
+        )
+    }
+
+    pub fn delete_group(&self, id: u64) -> Result<(), String> {
+        self.delete(&format!("/groups/{}.json", id))
+    }
+
+    pub fn add_user_to_group(&self, group_id: u64, user_id: u64) -> Result<(), String> {
+        self.post_no_content(
+            &format!("/groups/{}/users.json", group_id),
+            &serde_json::json!({ "user_id": user_id }),
+        )
+    }
+
+    pub fn remove_user_from_group(&self, group_id: u64, user_id: u64) -> Result<(), String> {
+        self.delete(&format!("/groups/{}/users/{}.json", group_id, user_id))
+    }
 }

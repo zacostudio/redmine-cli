@@ -304,3 +304,27 @@ fn parses_wiki_update_with_text() {
         _ => panic!("expected Wiki::Update"),
     }
 }
+
+#[test]
+fn parses_group_create() {
+    let cli = parse(&["group", "create", "--name", "QA", "--user", "1,2"]);
+    match cli.command {
+        Command::Group(redmine_cli::cli::groups::GroupCommand::Create(a)) => {
+            assert_eq!(a.name, "QA");
+            assert_eq!(a.users, vec![1, 2]);
+        }
+        _ => panic!("expected Group::Create"),
+    }
+}
+
+#[test]
+fn parses_group_add_user() {
+    let cli = parse(&["group", "add-user", "10", "--user", "42"]);
+    match cli.command {
+        Command::Group(redmine_cli::cli::groups::GroupCommand::AddUser(a)) => {
+            assert_eq!(a.group, 10);
+            assert_eq!(a.user, 42);
+        }
+        _ => panic!("expected Group::AddUser"),
+    }
+}

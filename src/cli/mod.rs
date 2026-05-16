@@ -8,6 +8,7 @@ pub mod config_cmd;
 pub mod custom_fields;
 pub mod enums;
 pub mod files;
+pub mod groups;
 pub mod issues;
 pub mod memberships;
 pub mod news;
@@ -93,6 +94,9 @@ pub enum Command {
     /// Wiki pages: list/show/create/update/delete.
     #[command(subcommand)]
     Wiki(wiki::WikiCommand),
+    /// Groups (admin only): list/show/create/update/delete/add-user/remove-user.
+    #[command(subcommand)]
+    Group(groups::GroupCommand),
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -147,6 +151,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::File(sub) => files::handle(sub, client),
         Command::Query => queries::handle(client),
         Command::Wiki(sub) => wiki::handle(sub, client),
+        Command::Group(sub) => groups::handle(sub, client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

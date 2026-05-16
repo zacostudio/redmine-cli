@@ -283,6 +283,26 @@ pub struct VersionResponse {
     pub version: RedmineVersion,
 }
 
+// ── Groups ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineGroup {
+    pub id: u64,
+    pub name: String,
+    pub users: Option<Vec<IdName>>,
+    pub memberships: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GroupsResponse {
+    pub groups: Vec<RedmineGroup>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GroupResponse {
+    pub group: RedmineGroup,
+}
+
 // ── Wiki ────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
