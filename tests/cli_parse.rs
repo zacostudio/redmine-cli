@@ -244,3 +244,29 @@ fn parses_news_create() {
         _ => panic!("expected News::Create"),
     }
 }
+
+#[test]
+fn parses_file_list() {
+    let cli = parse(&["file", "list", "demo"]);
+    match cli.command {
+        Command::File(redmine_cli::cli::files::FileCommand::List(a)) => {
+            assert_eq!(a.project, "demo");
+        }
+        _ => panic!("expected File::List"),
+    }
+}
+
+#[test]
+fn parses_file_upload() {
+    let cli = parse(&[
+        "file", "upload", "demo", "--path", "/tmp/x.bin", "--description", "d",
+    ]);
+    match cli.command {
+        Command::File(redmine_cli::cli::files::FileCommand::Upload(a)) => {
+            assert_eq!(a.project, "demo");
+            assert_eq!(a.path.as_os_str(), "/tmp/x.bin");
+            assert_eq!(a.description.as_deref(), Some("d"));
+        }
+        _ => panic!("expected File::Upload"),
+    }
+}

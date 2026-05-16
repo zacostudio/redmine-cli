@@ -283,6 +283,28 @@ pub struct VersionResponse {
     pub version: RedmineVersion,
 }
 
+// ── Files (project) ─────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineFile {
+    pub id: u64,
+    pub filename: String,
+    pub filesize: Option<u64>,
+    pub content_type: Option<String>,
+    pub description: Option<String>,
+    pub content_url: Option<String>,
+    pub author: Option<IdName>,
+    pub created_on: Option<String>,
+    pub version: Option<IdName>,
+    pub digest: Option<String>,
+    pub downloads: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FilesResponse {
+    pub files: Vec<RedmineFile>,
+}
+
 // ── News ────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

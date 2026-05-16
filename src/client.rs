@@ -70,6 +70,22 @@ impl RedmineClient {
             .map_err(|e| format!("failed to parse response: {e}"))
     }
 
+    fn post_no_content(&self, path: &str, body: &serde_json::Value) -> Result<(), String> {
+        let url = format!("{}{}", self.base_url, path);
+        let resp = self
+            .client
+            .post(&url)
+            .json(body)
+            .send()
+            .map_err(|e| format!("request failed: {e}"))?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body_text = resp.text().unwrap_or_default();
+            return Err(format!("HTTP {} — {}", status.as_u16(), body_text));
+        }
+        Ok(())
+    }
+
     fn put_no_content(&self, path: &str, body: &serde_json::Value) -> Result<(), String> {
         let url = format!("{}{}", self.base_url, path);
         let resp = self
@@ -390,6 +406,21 @@ impl RedmineClient {
         self.post(
             &format!("/projects/{}/news.json", project),
             &serde_json::json!({ "news": payload }),
+        )
+    }
+
+    pub fn list_files(&self, project: &str) -> Result<FilesResponse, String> {
+        self.get(&format!("/projects/{}/files.json", project), &[])
+    }
+
+    pub fn attach_file_to_project(
+        &self,
+        project: &str,
+        payload: serde_json::Value,
+    ) -> Result<(), String> {
+        self.post_no_content(
+            &format!("/projects/{}/files.json", project),
+            &serde_json::json!({ "file": payload }),
         )
     }
 }

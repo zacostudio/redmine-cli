@@ -452,3 +452,35 @@ async fn news_create_posts_and_returns_json() {
     assert_eq!(v["id"], 8);
     assert_eq!(v["description"], "world");
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn file_list_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/projects/demo/files.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "files": [
+                {
+                    "id": 17,
+                    "filename": "spec.pdf",
+                    "filesize": 1024,
+                    "content_type": "application/pdf"
+                }
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["file", "list", "demo"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["files"][0]["id"], 17);
+    assert_eq!(v["files"][0]["filename"], "spec.pdf");
+}
