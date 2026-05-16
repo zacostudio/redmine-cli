@@ -145,3 +145,9 @@ fn parses_roles() {
     let cli = parse(&["roles"]);
     assert!(matches!(cli.command, Command::Roles));
 }
+
+#[test]
+fn parses_document_categories() {
+    let cli = parse(&["document-categories"]);
+    assert!(matches!(cli.command, Command::DocumentCategories));
+}

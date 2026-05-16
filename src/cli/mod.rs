@@ -60,6 +60,9 @@ pub enum Command {
     Priorities,
     /// List roles (admin only).
     Roles,
+    /// List document categories.
+    #[command(name = "document-categories")]
+    DocumentCategories,
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -105,6 +108,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Trackers => enums::trackers(client),
         Command::Priorities => enums::priorities(client),
         Command::Roles => roles::handle(client),
+        Command::DocumentCategories => enums::document_categories(client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

@@ -290,4 +290,8 @@ impl RedmineClient {
     pub fn list_roles(&self) -> Result<RolesResponse, String> {
         self.get("/roles.json", &[])
     }
+
+    pub fn list_document_categories(&self) -> Result<DocumentCategoriesResponse, String> {
+        self.get("/enumerations/document_categories.json", &[])
+    }
 }

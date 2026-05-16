@@ -241,3 +241,17 @@ pub struct CustomField {
 pub struct RolesResponse {
     pub roles: Vec<IdName>,
 }
+
+// ── Document categories ─────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct DocumentCategoriesResponse {
+    pub document_categories: Vec<RedmineDocumentCategory>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineDocumentCategory {
+    pub id: u64,
+    pub name: String,
+    pub is_default: Option<bool>,
+}

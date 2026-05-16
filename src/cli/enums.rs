@@ -45,3 +45,17 @@ pub fn priorities(client: &RedmineClient) {
         Err(e) => output::print_error(&format!("redmine priorities: {e}")),
     }
 }
+
+pub fn document_categories(client: &RedmineClient) {
+    match client.list_document_categories() {
+        Ok(r) => {
+            let items: Vec<_> = r
+                .document_categories
+                .iter()
+                .map(|c| json!({ "id": c.id, "name": c.name, "is_default": c.is_default }))
+                .collect();
+            output::print_json(json!(items));
+        }
+        Err(e) => output::print_error(&format!("redmine document-categories: {e}")),
+    }
+}
