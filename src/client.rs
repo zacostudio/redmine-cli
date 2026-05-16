@@ -512,4 +512,15 @@ impl RedmineClient {
             &serde_json::json!({ "user": payload }),
         )
     }
+
+    pub fn add_issue_watcher(&self, issue_id: u64, user_id: u64) -> Result<(), String> {
+        self.post_no_content(
+            &format!("/issues/{}/watchers.json", issue_id),
+            &serde_json::json!({ "user_id": user_id }),
+        )
+    }
+
+    pub fn remove_issue_watcher(&self, issue_id: u64, user_id: u64) -> Result<(), String> {
+        self.delete(&format!("/issues/{}/watchers/{}.json", issue_id, user_id))
+    }
 }

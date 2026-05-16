@@ -339,3 +339,38 @@ fn parses_my_account_update() {
         _ => panic!("expected MyAccount::Update"),
     }
 }
+
+#[test]
+fn parses_issue_watcher_add() {
+    let cli = parse(&["issue", "10", "watcher", "add", "--user", "7"]);
+    match cli.command {
+        Command::Issue(a) => {
+            assert_eq!(a.id, Some(10));
+            match a.sub {
+                Some(redmine_cli::cli::issues::IssueSub::Watcher(
+                    redmine_cli::cli::issues::IssueWatcherSub::Add(w),
+                )) => assert_eq!(w.user, 7),
+                _ => panic!("expected Watcher::Add"),
+            }
+        }
+        _ => panic!("expected Issue"),
+    }
+}
+
+#[test]
+fn parses_issue_note() {
+    let cli = parse(&["issue", "10", "note", "--message", "hi", "--private"]);
+    match cli.command {
+        Command::Issue(a) => {
+            assert_eq!(a.id, Some(10));
+            match a.sub {
+                Some(redmine_cli::cli::issues::IssueSub::Note(n)) => {
+                    assert_eq!(n.message, "hi");
+                    assert!(n.private);
+                }
+                _ => panic!("expected Note"),
+            }
+        }
+        _ => panic!("expected Issue"),
+    }
+}

@@ -707,3 +707,56 @@ async fn my_account_show_returns_json() {
     assert_eq!(v["login"], "alice");
     assert_eq!(v["admin"], false);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn issue_watcher_add_posts() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/issues/42/watchers.json"))
+        .respond_with(ResponseTemplate::new(204))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["issue", "42", "watcher", "add", "--user", "7"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["ok"], true);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn issue_note_puts_journal() {
+    let server = MockServer::start().await;
+    // update_issue first PUTs to issues/:id.json, then GETs it again.
+    Mock::given(method("PUT"))
+        .and(path("/issues/42.json"))
+        .respond_with(ResponseTemplate::new(204))
+        .mount(&server)
+        .await;
+    // The follow-up GET issued by update_issue.
+    Mock::given(method("GET"))
+        .and(path("/issues/42.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "issue": {"id": 42, "project": {"id": 1, "name": "demo"}, "subject": "x"}
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["issue", "42", "note", "--message", "looks good", "--private"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["ok"], true);
+}

@@ -130,6 +130,35 @@ pub enum IssueSub {
     AddRelation(IssueAddRelationArgs),
     /// Remove a relation by its relation-id.
     RemoveRelation(IssueRemoveRelationArgs),
+    /// Manage watchers on an issue.
+    #[command(subcommand)]
+    Watcher(IssueWatcherSub),
+    /// Post a note (journal entry) on an issue.
+    Note(IssueNoteArgs),
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum IssueWatcherSub {
+    /// Add a user as watcher.
+    Add(IssueWatcherArgs),
+    /// Remove a user from watchers.
+    Remove(IssueWatcherArgs),
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct IssueWatcherArgs {
+    /// User id to add or remove.
+    #[arg(long = "user")]
+    pub user: u64,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct IssueNoteArgs {
+    /// Note body. Use "-" to read from stdin.
+    #[arg(long)]
+    pub message: String,
+    #[arg(long = "private", default_value_t = false)]
+    pub private: bool,
 }
 
 #[derive(Args, Debug, Default, Clone)]
@@ -268,11 +297,44 @@ pub fn handle_one(args: IssueArgs, client: &RedmineClient, cfg: &Config) {
             })),
             Err(e) => output::print_error(&format!("failed to add relation: {e}")),
         },
+        Some(IssueSub::Watcher(IssueWatcherSub::Add(w))) => {
+            match client.add_issue_watcher(id, w.user) {
+                Ok(()) => output::print_json(json!({ "ok": true })),
+                Err(e) => output::print_error(&format!("failed to add watcher: {e}")),
+            }
+        }
+        Some(IssueSub::Watcher(IssueWatcherSub::Remove(w))) => {
+            match client.remove_issue_watcher(id, w.user) {
+                Ok(()) => output::print_json(json!({ "ok": true })),
+                Err(e) => output::print_error(&format!("failed to remove watcher: {e}")),
+            }
+        }
+        Some(IssueSub::Note(n)) => post_note(id, n, client),
         None => match client.get_issue(id) {
             Ok(r) => output::print_json(serde_json::to_value(&r.issue).unwrap_or(json!({}))),
             Err(e) => output::print_error(&format!("redmine issue: {e}")),
         },
         Some(IssueSub::Create(_)) | Some(IssueSub::RemoveRelation(_)) => unreachable!(),
+    }
+}
+
+fn post_note(id: u64, a: IssueNoteArgs, client: &RedmineClient) {
+    let text = if a.message == "-" {
+        match output::read_stdin() {
+            Ok(s) => s,
+            Err(e) => output::print_error(&format!("redmine issue note: {e}")),
+        }
+    } else {
+        a.message
+    };
+    let mut payload = serde_json::Map::new();
+    payload.insert("notes".into(), json!(text));
+    if a.private {
+        payload.insert("private_notes".into(), json!(true));
+    }
+    match client.update_issue(id, Value::Object(payload)) {
+        Ok(_) => output::print_json(json!({ "ok": true })),
+        Err(e) => output::print_error(&format!("redmine issue note: {e}")),
     }
 }
 
