@@ -283,6 +283,28 @@ pub struct VersionResponse {
     pub version: RedmineVersion,
 }
 
+// ── Memberships ─────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineMembership {
+    pub id: u64,
+    pub project: Option<IdName>,
+    pub user: Option<IdName>,
+    pub group: Option<IdName>,
+    pub roles: Option<Vec<IdName>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MembershipsResponse {
+    pub memberships: Vec<RedmineMembership>,
+    pub total_count: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MembershipResponse {
+    pub membership: RedmineMembership,
+}
+
 // ── Search ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]

@@ -332,4 +332,37 @@ impl RedmineClient {
     pub fn delete_version(&self, id: u64) -> Result<(), String> {
         self.delete(&format!("/versions/{}.json", id))
     }
+
+    pub fn list_memberships(&self, project_id: &str) -> Result<MembershipsResponse, String> {
+        self.get(
+            &format!("/projects/{}/memberships.json", project_id),
+            &[],
+        )
+    }
+
+    pub fn get_membership(&self, id: u64) -> Result<MembershipResponse, String> {
+        self.get(&format!("/memberships/{}.json", id), &[])
+    }
+
+    pub fn create_membership(
+        &self,
+        project_id: &str,
+        payload: serde_json::Value,
+    ) -> Result<MembershipResponse, String> {
+        self.post(
+            &format!("/projects/{}/memberships.json", project_id),
+            &serde_json::json!({ "membership": payload }),
+        )
+    }
+
+    pub fn update_membership(&self, id: u64, payload: serde_json::Value) -> Result<(), String> {
+        self.put_no_content(
+            &format!("/memberships/{}.json", id),
+            &serde_json::json!({ "membership": payload }),
+        )
+    }
+
+    pub fn delete_membership(&self, id: u64) -> Result<(), String> {
+        self.delete(&format!("/memberships/{}.json", id))
+    }
 }

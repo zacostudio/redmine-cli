@@ -334,3 +334,69 @@ async fn version_create_posts_and_returns_json() {
     assert_eq!(v["id"], 22);
     assert_eq!(v["name"], "v2.0");
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn membership_list_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/projects/demo/memberships.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "memberships": [
+                {
+                    "id": 5,
+                    "project": {"id": 1, "name": "demo"},
+                    "user": {"id": 10, "name": "alice"},
+                    "roles": [{"id": 4, "name": "Developer"}]
+                }
+            ],
+            "total_count": 1
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["membership", "list", "demo"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["memberships"][0]["id"], 5);
+    assert_eq!(v["memberships"][0]["user"]["name"], "alice");
+    assert_eq!(v["memberships"][0]["roles"][0]["name"], "Developer");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn membership_add_posts_and_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/projects/demo/memberships.json"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(serde_json::json!({
+            "membership": {
+                "id": 9,
+                "project": {"id": 1, "name": "demo"},
+                "user": {"id": 11, "name": "bob"},
+                "roles": [{"id": 4, "name": "Developer"}, {"id": 5, "name": "Reporter"}]
+            }
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args([
+            "membership", "add", "demo", "--user", "11", "--role", "4,5",
+        ])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["id"], 9);
+    assert_eq!(v["roles"].as_array().unwrap().len(), 2);
+}

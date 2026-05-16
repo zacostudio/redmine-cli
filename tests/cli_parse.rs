@@ -194,3 +194,29 @@ fn parses_version_create() {
         _ => panic!("expected Version::Create"),
     }
 }
+
+#[test]
+fn parses_membership_add_with_multi_role() {
+    let cli = parse(&[
+        "membership", "add", "demo", "--user", "11", "--role", "4,5", "--role", "6",
+    ]);
+    match cli.command {
+        Command::Membership(redmine_cli::cli::memberships::MembershipCommand::Add(a)) => {
+            assert_eq!(a.project, "demo");
+            assert_eq!(a.user, Some(11));
+            assert_eq!(a.role, vec![4, 5, 6]);
+        }
+        _ => panic!("expected Membership::Add"),
+    }
+}
+
+#[test]
+fn parses_membership_remove() {
+    let cli = parse(&["membership", "remove", "42"]);
+    match cli.command {
+        Command::Membership(redmine_cli::cli::memberships::MembershipCommand::Remove(a)) => {
+            assert_eq!(a.id, 42);
+        }
+        _ => panic!("expected Membership::Remove"),
+    }
+}
