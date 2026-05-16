@@ -10,6 +10,7 @@ pub mod enums;
 pub mod issues;
 pub mod projects;
 pub mod roles;
+pub mod search;
 pub mod time_entries;
 pub mod users;
 
@@ -67,6 +68,8 @@ pub enum Command {
     /// List custom field definitions (admin only).
     #[command(name = "custom-fields")]
     CustomFields,
+    /// Global search across issues, news, wiki, etc.
+    Search(search::SearchArgs),
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -114,6 +117,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Roles => roles::handle(client),
         Command::DocumentCategories => enums::document_categories(client),
         Command::CustomFields => custom_fields::handle(client),
+        Command::Search(a) => search::handle(a, client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

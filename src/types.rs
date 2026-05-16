@@ -256,6 +256,27 @@ pub struct RedmineDocumentCategory {
     pub is_default: Option<bool>,
 }
 
+// ── Search ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct SearchResponse {
+    pub results: Vec<RedmineSearchResult>,
+    pub total_count: Option<u64>,
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineSearchResult {
+    pub id: u64,
+    pub title: Option<String>,
+    #[serde(rename = "type")]
+    pub kind: Option<String>,
+    pub url: Option<String>,
+    pub description: Option<String>,
+    pub datetime: Option<String>,
+}
+
 // ── Custom fields (metadata) ────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]

@@ -247,3 +247,36 @@ async fn custom_fields_list_returns_json() {
     assert_eq!(v[0]["customized_type"], "issue");
     assert_eq!(v[0]["field_format"], "list");
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn search_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/search.json"))
+        .and(query_param("q", "bug"))
+        .and(query_param("limit", "10"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "results": [
+                {"id": 9, "title": "bug: x", "type": "issue", "url": "http://x/9", "datetime": "2026-05-16T00:00:00Z"}
+            ],
+            "total_count": 1,
+            "offset": 0,
+            "limit": 10
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["search", "bug", "--limit", "10"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["total_count"], 1);
+    assert_eq!(v["results"][0]["id"], 9);
+    assert_eq!(v["results"][0]["type"], "issue");
+}

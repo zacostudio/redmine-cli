@@ -157,3 +157,16 @@ fn parses_custom_fields() {
     let cli = parse(&["custom-fields"]);
     assert!(matches!(cli.command, Command::CustomFields));
 }
+
+#[test]
+fn parses_search() {
+    let cli = parse(&["search", "hello", "--scope", "issues", "--limit", "5"]);
+    match cli.command {
+        Command::Search(a) => {
+            assert_eq!(a.query, "hello");
+            assert_eq!(a.scope.as_deref(), Some("issues"));
+            assert_eq!(a.limit, 5);
+        }
+        _ => panic!("expected Search"),
+    }
+}

@@ -298,4 +298,8 @@ impl RedmineClient {
     pub fn list_custom_fields(&self) -> Result<CustomFieldsResponse, String> {
         self.get("/custom_fields.json", &[])
     }
+
+    pub fn search(&self, params: &[(&str, String)]) -> Result<SearchResponse, String> {
+        self.get("/search.json", params)
+    }
 }
