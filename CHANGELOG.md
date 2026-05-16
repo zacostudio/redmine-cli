@@ -6,14 +6,16 @@
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 ## [Unreleased]
+
+## [0.3.0] - 2026-05-16
 ### Added
 - 모든 리소스 생성 명령(`issue create`, `time-entry create`, `version create`, `membership add`, `news create`, `group create`)에 `--id-only` 플래그 확장. `attachment upload` 에는 `--token-only` 추가. (4b0eba7)
 
 ### Changed
 - `issue note` 플래그를 `--private-notes` 로 통일. 기존 `--private` 은 alias 로 유지되어 호환된다. (936a0a1)
-- `client::get_issue(id, include)` 시그니처 변경. `attachment list` 가 더 이상 journals/children/relations 까지 끌어오지 않는다. 라이브러리 사용자 영향. (936a0a1)
+- `client::get_issue(id, include)` 시그니처 변경. `attachment list` 가 더 이상 journals/children/relations 까지 끌어오지 않는다. **라이브러리 사용자 영향.** (936a0a1)
 - `client::update_issue` 가 PUT 만 수행하도록 변경. `issue update` CLI 출력은 호출자가 후속 GET 으로 유지하지만, `issue note` 는 한 번의 PUT 으로 완료되어 RTT 가 절반으로 감소. (936a0a1)
-- 클라이언트 에러 타입이 단순 `String` 에서 `ClientError` enum 으로 교체됨. 4xx/5xx 는 `ClientError::Http { status, body }` 로 구조화. Display 텍스트는 호환 유지. 라이브러리 사용자 영향. (936a0a1)
+- 클라이언트 에러 타입이 단순 `String` 에서 `ClientError` enum 으로 교체됨. 4xx/5xx 는 `ClientError::Http { status, body }` 로 구조화. Display 텍스트는 호환 유지. **라이브러리 사용자 영향.** (936a0a1)
 
 ### Performance
 - 첨부 파일 업로드/다운로드를 스트리밍으로 변경. 파일 전체를 메모리에 적재하던 동작을 제거해 대용량 첨부에서 OOM 위험 없음. (936a0a1)
@@ -22,9 +24,10 @@
 ### Security
 - HTTP 리다이렉트를 전체 차단 (`reqwest::redirect::Policy::none`). 잘못 설정된 `server_url` 이나 중간자 공격이 발생해도 `X-Redmine-API-Key` 가 외부 호스트로 따라가지 않는다. (936a0a1)
 - `config.toml` 을 Unix 에서 0600 권한으로 저장. 평문 API 토큰을 동일 호스트의 다른 사용자가 읽을 수 없도록 `OpenOptions::mode` 와 `set_permissions` 로 강등. (4fa2a9a)
-- `Cli`, `Config`, `FileConfig`, `CliOverrides` 의 `Debug` 출력에서 `api_token` 을 `<REDACTED>` 로 마스킹. `eprintln!("{:?}", ...)` 한 줄로 토큰이 stderr 에 새는 잠재 결함을 차단.
-- 프로젝트 identifier 13곳을 URL path 에 그대로 박던 동작을 `urlencoding::encode` 처리. `--project "foo/../admin"` 같은 입력으로 의도 외 endpoint 가 호출되는 path manipulation 가능성을 막는다.
-- `attachment download` 가 서버 응답의 `content_url` 을 그대로 GET 하기 전에 host/scheme/port 가 `server_url` 과 일치하는지 검증. 응답 조작이나 손상된 응답이 외부 URL 을 가리켜도 API 키가 외부로 따라가지 않는다.
+- `Cli`, `Config`, `FileConfig`, `CliOverrides` 의 `Debug` 출력에서 `api_token` 을 `<REDACTED>` 로 마스킹. `eprintln!("{:?}", ...)` 한 줄로 토큰이 stderr 에 새는 잠재 결함을 차단. (cfbe56f)
+- 프로젝트 identifier 13곳을 URL path 에 그대로 박던 동작을 `urlencoding::encode` 처리. `--project "foo/../admin"` 같은 입력으로 의도 외 endpoint 가 호출되는 path manipulation 가능성을 막는다. (cfbe56f)
+- `attachment download` 가 서버 응답의 `content_url` 을 그대로 GET 하기 전에 host/scheme/port 가 `server_url` 과 일치하는지 검증. 응답 조작이나 손상된 응답이 외부 URL 을 가리켜도 API 키가 외부로 따라가지 않는다. (cfbe56f)
+- `cargo audit` 자동화 워크플로 추가. Cargo.toml/lock 변경 PR + 매주 월요일 정기 + 수동 트리거로 RustSec advisory DB 와 대조한다. (dec917b)
 
 ## [0.2.0] - 2026-05-16
 ### Added
@@ -61,7 +64,8 @@
 - 설정 우선순위(플래그 > 환경변수 > TOML)와 커스텀 필드 alias 파서.
 - macOS(aarch64/x86_64) 및 Linux(x86_64)용 바이너리 릴리스 워크플로우.
 
-[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/zacostudio/redmine-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/zacostudio/redmine-cli/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/zacostudio/redmine-cli/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/zacostudio/redmine-cli/compare/v0.1.0...v0.1.1
