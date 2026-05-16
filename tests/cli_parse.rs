@@ -139,3 +139,9 @@ fn parses_config_alias_remove() {
         _ => panic!("expected Config::Alias::Remove"),
     }
 }
+
+#[test]
+fn parses_roles() {
+    let cli = parse(&["roles"]);
+    assert!(matches!(cli.command, Command::Roles));
+}

@@ -8,6 +8,7 @@ pub mod config_cmd;
 pub mod enums;
 pub mod issues;
 pub mod projects;
+pub mod roles;
 pub mod time_entries;
 pub mod users;
 
@@ -57,6 +58,8 @@ pub enum Command {
     Trackers,
     /// List issue priorities.
     Priorities,
+    /// List roles (admin only).
+    Roles,
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -101,6 +104,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Statuses => enums::statuses(client),
         Command::Trackers => enums::trackers(client),
         Command::Priorities => enums::priorities(client),
+        Command::Roles => roles::handle(client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

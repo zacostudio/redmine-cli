@@ -234,3 +234,10 @@ pub struct CustomField {
     pub name: Option<String>,
     pub value: Option<String>,
 }
+
+// ── Roles ───────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct RolesResponse {
+    pub roles: Vec<IdName>,
+}

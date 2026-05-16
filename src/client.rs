@@ -286,4 +286,8 @@ impl RedmineClient {
     pub fn list_priorities(&self) -> Result<PrioritiesResponse, String> {
         self.get("/enumerations/issue_priorities.json", &[])
     }
+
+    pub fn list_roles(&self) -> Result<RolesResponse, String> {
+        self.get("/roles.json", &[])
+    }
 }
