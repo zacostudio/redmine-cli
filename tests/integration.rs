@@ -513,3 +513,109 @@ async fn query_list_returns_json() {
     assert_eq!(v["queries"][0]["name"], "Open bugs");
     assert_eq!(v["queries"][1]["project_id"], 5);
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn wiki_list_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/projects/demo/wiki/index.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "wiki_pages": [
+                {"title": "Wiki", "version": 1, "created_on": "2026-01-01T00:00:00Z"},
+                {"title": "Roadmap", "parent": {"title": "Wiki"}, "version": 4}
+            ]
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["wiki", "list", "demo"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["wiki_pages"][0]["title"], "Wiki");
+    assert_eq!(v["wiki_pages"][1]["parent"], "Wiki");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn wiki_show_returns_full_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/projects/demo/wiki/Roadmap.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "wiki_page": {
+                "title": "Roadmap",
+                "text": "# plan",
+                "version": 4,
+                "author": {"id": 1, "name": "admin"},
+                "comments": "fix typo",
+                "created_on": "2026-01-01T00:00:00Z",
+                "updated_on": "2026-05-16T00:00:00Z"
+            }
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["wiki", "show", "demo", "Roadmap"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["title"], "Roadmap");
+    assert_eq!(v["text"], "# plan");
+    assert_eq!(v["version"], 4);
+    assert_eq!(v["author"], "admin");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn wiki_put_creates_or_updates() {
+    let server = MockServer::start().await;
+    Mock::given(method("PUT"))
+        .and(path("/projects/demo/wiki/Roadmap.json"))
+        .respond_with(ResponseTemplate::new(204))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args([
+            "wiki", "update", "demo", "Roadmap", "--text", "hello", "--comments", "init",
+        ])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["title"], "Roadmap");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn wiki_show_404_surfaces_error() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/projects/demo/wiki/Missing.json"))
+        .respond_with(ResponseTemplate::new(404).set_body_string("Not Found"))
+        .mount(&server)
+        .await;
+
+    Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["wiki", "show", "demo", "Missing"])
+        .assert()
+        .failure();
+}

@@ -18,6 +18,7 @@ pub mod search;
 pub mod time_entries;
 pub mod users;
 pub mod versions;
+pub mod wiki;
 
 use crate::client::RedmineClient;
 use crate::config::{self, CliOverrides, Config};
@@ -89,6 +90,9 @@ pub enum Command {
     File(files::FileCommand),
     /// List saved issue queries (read-only via REST API).
     Query,
+    /// Wiki pages: list/show/create/update/delete.
+    #[command(subcommand)]
+    Wiki(wiki::WikiCommand),
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -142,6 +146,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::News(sub) => news::handle(sub, client),
         Command::File(sub) => files::handle(sub, client),
         Command::Query => queries::handle(client),
+        Command::Wiki(sub) => wiki::handle(sub, client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

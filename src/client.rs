@@ -427,4 +427,38 @@ impl RedmineClient {
     pub fn list_queries(&self) -> Result<QueriesResponse, String> {
         self.get("/queries.json", &[])
     }
+
+    pub fn list_wiki_pages(&self, project: &str) -> Result<WikiIndexResponse, String> {
+        self.get(&format!("/projects/{}/wiki/index.json", project), &[])
+    }
+
+    pub fn get_wiki_page(
+        &self,
+        project: &str,
+        title: &str,
+    ) -> Result<WikiPageResponse, String> {
+        let encoded = urlencoding::encode(title);
+        self.get(
+            &format!("/projects/{}/wiki/{}.json", project, encoded),
+            &[("include", "attachments".to_string())],
+        )
+    }
+
+    pub fn put_wiki_page(
+        &self,
+        project: &str,
+        title: &str,
+        payload: serde_json::Value,
+    ) -> Result<(), String> {
+        let encoded = urlencoding::encode(title);
+        self.put_no_content(
+            &format!("/projects/{}/wiki/{}.json", project, encoded),
+            &serde_json::json!({ "wiki_page": payload }),
+        )
+    }
+
+    pub fn delete_wiki_page(&self, project: &str, title: &str) -> Result<(), String> {
+        let encoded = urlencoding::encode(title);
+        self.delete(&format!("/projects/{}/wiki/{}.json", project, encoded))
+    }
 }

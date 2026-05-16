@@ -276,3 +276,31 @@ fn parses_query() {
     let cli = parse(&["query"]);
     assert!(matches!(cli.command, Command::Query));
 }
+
+#[test]
+fn parses_wiki_show() {
+    let cli = parse(&["wiki", "show", "demo", "Roadmap"]);
+    match cli.command {
+        Command::Wiki(redmine_cli::cli::wiki::WikiCommand::Show(a)) => {
+            assert_eq!(a.project, "demo");
+            assert_eq!(a.title, "Roadmap");
+        }
+        _ => panic!("expected Wiki::Show"),
+    }
+}
+
+#[test]
+fn parses_wiki_update_with_text() {
+    let cli = parse(&[
+        "wiki", "update", "demo", "Roadmap", "--text", "hi", "--comments", "x",
+    ]);
+    match cli.command {
+        Command::Wiki(redmine_cli::cli::wiki::WikiCommand::Update(a)) => {
+            assert_eq!(a.project, "demo");
+            assert_eq!(a.title, "Roadmap");
+            assert_eq!(a.text, "hi");
+            assert_eq!(a.comments.as_deref(), Some("x"));
+        }
+        _ => panic!("expected Wiki::Update"),
+    }
+}

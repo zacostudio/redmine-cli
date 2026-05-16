@@ -283,6 +283,36 @@ pub struct VersionResponse {
     pub version: RedmineVersion,
 }
 
+// ── Wiki ────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WikiParent {
+    pub title: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineWikiPage {
+    pub title: String,
+    pub parent: Option<WikiParent>,
+    pub text: Option<String>,
+    pub version: Option<u64>,
+    pub author: Option<IdName>,
+    pub comments: Option<String>,
+    pub created_on: Option<String>,
+    pub updated_on: Option<String>,
+    pub attachments: Option<Vec<Attachment>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WikiIndexResponse {
+    pub wiki_pages: Vec<RedmineWikiPage>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WikiPageResponse {
+    pub wiki_page: RedmineWikiPage,
+}
+
 // ── Saved Queries ───────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
