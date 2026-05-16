@@ -272,10 +272,12 @@ pub fn handle_one(args: IssueArgs, client: &RedmineClient, cfg: &Config) {
 fn cf_array(specs: &[String], cfg: &Config) -> Vec<Value> {
     specs
         .iter()
-        .map(|spec| match config::parse_custom_field(spec, &cfg.cf_aliases) {
-            Ok((id, value)) => json!({ "id": id, "value": value }),
-            Err(e) => output::print_error(&e),
-        })
+        .map(
+            |spec| match config::parse_custom_field(spec, &cfg.cf_aliases) {
+                Ok((id, value)) => json!({ "id": id, "value": value }),
+                Err(e) => output::print_error(&e),
+            },
+        )
         .collect()
 }
 

@@ -116,11 +116,21 @@ fn create(a: CreateArgs, client: &RedmineClient) {
 
 fn list(a: ListArgs, client: &RedmineClient) {
     let mut params: Vec<(&str, String)> = Vec::new();
-    if let Some(v) = a.user { params.push(("user_id", v)); }
-    if let Some(v) = a.project { params.push(("project_id", v)); }
-    if let Some(v) = a.issue { params.push(("issue_id", v)); }
-    if let Some(v) = a.from { params.push(("from", v)); }
-    if let Some(v) = a.to { params.push(("to", v)); }
+    if let Some(v) = a.user {
+        params.push(("user_id", v));
+    }
+    if let Some(v) = a.project {
+        params.push(("project_id", v));
+    }
+    if let Some(v) = a.issue {
+        params.push(("issue_id", v));
+    }
+    if let Some(v) = a.from {
+        params.push(("from", v));
+    }
+    if let Some(v) = a.to {
+        params.push(("to", v));
+    }
     params.push(("limit", a.limit.to_string()));
     match client.list_time_entries(&params) {
         Ok(r) => {
@@ -148,10 +158,18 @@ fn list(a: ListArgs, client: &RedmineClient) {
 
 fn update(a: UpdateArgs, client: &RedmineClient) {
     let mut payload = serde_json::Map::new();
-    if let Some(v) = a.hours { payload.insert("hours".into(), json!(v)); }
-    if let Some(v) = a.activity { payload.insert("activity_id".into(), json!(v)); }
-    if let Some(v) = a.comment { payload.insert("comments".into(), json!(v)); }
-    if let Some(v) = a.spent_on { payload.insert("spent_on".into(), json!(v)); }
+    if let Some(v) = a.hours {
+        payload.insert("hours".into(), json!(v));
+    }
+    if let Some(v) = a.activity {
+        payload.insert("activity_id".into(), json!(v));
+    }
+    if let Some(v) = a.comment {
+        payload.insert("comments".into(), json!(v));
+    }
+    if let Some(v) = a.spent_on {
+        payload.insert("spent_on".into(), json!(v));
+    }
     if payload.is_empty() {
         output::print_error("time-entry update: no fields to update");
     }

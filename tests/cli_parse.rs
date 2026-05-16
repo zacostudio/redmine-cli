@@ -24,10 +24,14 @@ fn parses_projects_with_defaults() {
 fn parses_issues_with_filters() {
     let cli = parse(&[
         "issues",
-        "--project", "demo",
-        "--status", "1",
-        "--query", "bug",
-        "--custom-field", "7=Dev",
+        "--project",
+        "demo",
+        "--status",
+        "1",
+        "--query",
+        "bug",
+        "--custom-field",
+        "7=Dev",
     ]);
     match cli.command {
         Command::Issues(a) => {
@@ -54,15 +58,14 @@ fn parses_single_issue_by_id() {
 
 #[test]
 fn parses_issue_create_without_id() {
-    let cli = parse(&[
-        "issue", "create",
-        "--project", "demo",
-        "--subject", "hi",
-    ]);
+    let cli = parse(&["issue", "create", "--project", "demo", "--subject", "hi"]);
     match cli.command {
         Command::Issue(a) => {
             assert!(a.id.is_none());
-            assert!(matches!(a.sub, Some(redmine_cli::cli::issues::IssueSub::Create(_))));
+            assert!(matches!(
+                a.sub,
+                Some(redmine_cli::cli::issues::IssueSub::Create(_))
+            ));
         }
         _ => panic!("expected Issue"),
     }
@@ -70,11 +73,7 @@ fn parses_issue_create_without_id() {
 
 #[test]
 fn parses_time_entry_create() {
-    let cli = parse(&[
-        "time-entry", "create",
-        "--issue", "10",
-        "--hours", "1.5",
-    ]);
+    let cli = parse(&["time-entry", "create", "--issue", "10", "--hours", "1.5"]);
     match cli.command {
         Command::TimeEntry(redmine_cli::cli::time_entries::TimeEntryCommand::Create(a)) => {
             assert_eq!(a.issue, 10);

@@ -111,7 +111,10 @@ impl RedmineClient {
         let path = format!("/issues/{}.json", id);
         self.get(
             &path,
-            &[("include", "journals,attachments,children,relations".to_string())],
+            &[(
+                "include",
+                "journals,attachments,children,relations".to_string(),
+            )],
         )
     }
 

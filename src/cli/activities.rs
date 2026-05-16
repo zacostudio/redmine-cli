@@ -20,7 +20,11 @@ pub fn handle(client: &RedmineClient) {
     let out: Vec<ActivityOut> = resp
         .time_entry_activities
         .into_iter()
-        .map(|a| ActivityOut { id: a.id, name: a.name, is_default: a.is_default })
+        .map(|a| ActivityOut {
+            id: a.id,
+            name: a.name,
+            is_default: a.is_default,
+        })
         .collect();
     output::print_json(json!({ "activities": out }));
 }

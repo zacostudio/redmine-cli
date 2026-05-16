@@ -72,8 +72,8 @@ fn load_file(explicit: Option<PathBuf>) -> Result<FileConfig, ConfigError> {
     if !path.exists() {
         return Ok(FileConfig::default());
     }
-    let text = std::fs::read_to_string(&path)
-        .map_err(|e| ConfigError::Io(path.clone(), e.to_string()))?;
+    let text =
+        std::fs::read_to_string(&path).map_err(|e| ConfigError::Io(path.clone(), e.to_string()))?;
     toml::from_str::<FileConfig>(&text).map_err(|e| ConfigError::Parse(path, e.to_string()))
 }
 
@@ -101,14 +101,20 @@ mod tests {
     #[test]
     fn parse_custom_field_numeric() {
         let aliases = HashMap::new();
-        assert_eq!(parse_custom_field("7=Dev", &aliases).unwrap(), (7, "Dev".into()));
+        assert_eq!(
+            parse_custom_field("7=Dev", &aliases).unwrap(),
+            (7, "Dev".into())
+        );
     }
 
     #[test]
     fn parse_custom_field_alias() {
         let mut aliases = HashMap::new();
         aliases.insert("state".to_string(), 7);
-        assert_eq!(parse_custom_field("state=Dev", &aliases).unwrap(), (7, "Dev".into()));
+        assert_eq!(
+            parse_custom_field("state=Dev", &aliases).unwrap(),
+            (7, "Dev".into())
+        );
     }
 
     #[test]
