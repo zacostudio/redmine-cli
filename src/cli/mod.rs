@@ -11,6 +11,7 @@ pub mod files;
 pub mod groups;
 pub mod issues;
 pub mod memberships;
+pub mod my_account;
 pub mod news;
 pub mod projects;
 pub mod queries;
@@ -97,6 +98,9 @@ pub enum Command {
     /// Groups (admin only): list/show/create/update/delete/add-user/remove-user.
     #[command(subcommand)]
     Group(groups::GroupCommand),
+    /// Current user account: show/update.
+    #[command(name = "my-account", subcommand)]
+    MyAccount(my_account::MyAccountCommand),
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -152,6 +156,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Query => queries::handle(client),
         Command::Wiki(sub) => wiki::handle(sub, client),
         Command::Group(sub) => groups::handle(sub, client),
+        Command::MyAccount(sub) => my_account::handle(sub, client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

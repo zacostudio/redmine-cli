@@ -328,3 +328,14 @@ fn parses_group_add_user() {
         _ => panic!("expected Group::AddUser"),
     }
 }
+
+#[test]
+fn parses_my_account_update() {
+    let cli = parse(&["my-account", "update", "--mail", "x@y"]);
+    match cli.command {
+        Command::MyAccount(redmine_cli::cli::my_account::MyAccountCommand::Update(a)) => {
+            assert_eq!(a.mail.as_deref(), Some("x@y"));
+        }
+        _ => panic!("expected MyAccount::Update"),
+    }
+}

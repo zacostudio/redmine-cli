@@ -111,6 +111,14 @@ pub struct RedmineUser {
     pub firstname: Option<String>,
     pub lastname: Option<String>,
     pub mail: Option<String>,
+    pub admin: Option<bool>,
+    pub created_on: Option<String>,
+    pub last_login_on: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UserResponse {
+    pub user: RedmineUser,
 }
 
 // ── Time entries ────────────────────────────────────────────────────

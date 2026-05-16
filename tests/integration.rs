@@ -672,3 +672,38 @@ async fn group_create_posts_and_returns_json() {
     assert_eq!(v["id"], 99);
     assert_eq!(v["users"][0]["name"], "alice");
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn my_account_show_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/my/account.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "user": {
+                "id": 7,
+                "login": "alice",
+                "firstname": "Alice",
+                "lastname": "Park",
+                "mail": "a@x",
+                "admin": false,
+                "created_on": "2024-01-01T00:00:00Z",
+                "last_login_on": "2026-05-16T00:00:00Z"
+            }
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["my-account", "show"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["id"], 7);
+    assert_eq!(v["login"], "alice");
+    assert_eq!(v["admin"], false);
+}

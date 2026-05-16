@@ -501,4 +501,15 @@ impl RedmineClient {
     pub fn remove_user_from_group(&self, group_id: u64, user_id: u64) -> Result<(), String> {
         self.delete(&format!("/groups/{}/users/{}.json", group_id, user_id))
     }
+
+    pub fn get_my_account(&self) -> Result<UserResponse, String> {
+        self.get("/my/account.json", &[])
+    }
+
+    pub fn update_my_account(&self, payload: serde_json::Value) -> Result<(), String> {
+        self.put_no_content(
+            "/my/account.json",
+            &serde_json::json!({ "user": payload }),
+        )
+    }
 }
