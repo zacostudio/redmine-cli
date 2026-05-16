@@ -64,7 +64,7 @@ pub fn handle(cmd: AttachmentCommand, client: &RedmineClient) {
 }
 
 fn list(a: ListArgs, client: &RedmineClient) {
-    match client.get_issue(a.issue) {
+    match client.get_issue(a.issue, &["attachments"]) {
         Ok(r) => {
             let attachments = r.issue.attachments.unwrap_or_default();
             let items: Vec<Value> = attachments
@@ -87,8 +87,7 @@ fn list(a: ListArgs, client: &RedmineClient) {
 }
 
 fn download(a: DownloadArgs, client: &RedmineClient) {
-    let info_path = format!("/attachments/{}.json", a.id);
-    let val: Value = match client.get(&info_path, &[]) {
+    let val: Value = match client.get_attachment_info(a.id) {
         Ok(v) => v,
         Err(e) => output::print_error(&format!("failed to get attachment info: {e}")),
     };

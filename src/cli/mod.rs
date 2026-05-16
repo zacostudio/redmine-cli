@@ -128,7 +128,7 @@ pub fn run(cli: Cli) {
     };
     let client = match RedmineClient::new(&cfg.server_url, &cfg.api_token) {
         Ok(c) => c,
-        Err(e) => output::print_error(&e),
+        Err(e) => output::print_error(&e.to_string()),
     };
     dispatch(cli.command, &client, &cfg);
 }

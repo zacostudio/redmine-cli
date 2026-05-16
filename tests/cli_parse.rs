@@ -359,19 +359,22 @@ fn parses_issue_watcher_add() {
 
 #[test]
 fn parses_issue_note() {
-    let cli = parse(&["issue", "10", "note", "--message", "hi", "--private"]);
-    match cli.command {
-        Command::Issue(a) => {
-            assert_eq!(a.id, Some(10));
-            match a.sub {
-                Some(redmine_cli::cli::issues::IssueSub::Note(n)) => {
-                    assert_eq!(n.message, "hi");
-                    assert!(n.private);
+    // --private 은 --private-notes 의 alias 로 유지되어야 한다 (호환).
+    for flag in ["--private", "--private-notes"] {
+        let cli = parse(&["issue", "10", "note", "--message", "hi", flag]);
+        match cli.command {
+            Command::Issue(a) => {
+                assert_eq!(a.id, Some(10));
+                match a.sub {
+                    Some(redmine_cli::cli::issues::IssueSub::Note(n)) => {
+                        assert_eq!(n.message, "hi");
+                        assert!(n.private_notes, "flag {} should set private_notes", flag);
+                    }
+                    _ => panic!("expected Note"),
                 }
-                _ => panic!("expected Note"),
             }
+            _ => panic!("expected Issue"),
         }
-        _ => panic!("expected Issue"),
     }
 }
 

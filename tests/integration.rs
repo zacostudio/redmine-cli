@@ -733,18 +733,10 @@ async fn issue_watcher_add_posts() {
 #[tokio::test(flavor = "current_thread")]
 async fn issue_note_puts_journal() {
     let server = MockServer::start().await;
-    // update_issue first PUTs to issues/:id.json, then GETs it again.
+    // issue note 는 PUT 만 수행하고 즉시 ok 를 출력한다 (이전에는 PUT 후 GET 까지 했었음).
     Mock::given(method("PUT"))
         .and(path("/issues/42.json"))
         .respond_with(ResponseTemplate::new(204))
-        .mount(&server)
-        .await;
-    // The follow-up GET issued by update_issue.
-    Mock::given(method("GET"))
-        .and(path("/issues/42.json"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-            "issue": {"id": 42, "project": {"id": 1, "name": "demo"}, "subject": "x"}
-        })))
         .mount(&server)
         .await;
 

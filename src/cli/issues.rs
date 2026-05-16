@@ -157,8 +157,13 @@ pub struct IssueNoteArgs {
     /// Note body. Use "-" to read from stdin.
     #[arg(long)]
     pub message: String,
-    #[arg(long = "private", default_value_t = false)]
-    pub private: bool,
+    /// 비공개 노트로 등록한다. 기존 호환을 위해 `--private` 도 받는다.
+    #[arg(
+        long = "private-notes",
+        visible_alias = "private",
+        default_value_t = false
+    )]
+    pub private_notes: bool,
 }
 
 #[derive(Args, Debug, Default, Clone)]
@@ -273,7 +278,7 @@ pub fn handle_one(args: IssueArgs, client: &RedmineClient, cfg: &Config) {
             Ok(()) => output::print_json(json!({ "ok": true })),
             Err(e) => output::print_error(&format!("failed to delete issue: {e}")),
         },
-        Some(IssueSub::Relations) => match client.get_issue(id) {
+        Some(IssueSub::Relations) => match client.get_issue(id, &["relations"]) {
             Ok(resp) => {
                 let rels = resp.issue.relations.unwrap_or_default();
                 let items: Vec<Value> = rels
@@ -319,7 +324,10 @@ pub fn handle_one(args: IssueArgs, client: &RedmineClient, cfg: &Config) {
             }
         }
         Some(IssueSub::Note(n)) => post_note(id, n, client),
-        None => match client.get_issue(id) {
+        None => match client.get_issue(
+            id,
+            &["journals", "attachments", "children", "relations"],
+        ) {
             Ok(r) => output::print_json(serde_json::to_value(&r.issue).unwrap_or(json!({}))),
             Err(e) => output::print_error(&format!("redmine issue: {e}")),
         },
@@ -338,11 +346,11 @@ fn post_note(id: u64, a: IssueNoteArgs, client: &RedmineClient) {
     };
     let mut payload = serde_json::Map::new();
     payload.insert("notes".into(), json!(text));
-    if a.private {
+    if a.private_notes {
         payload.insert("private_notes".into(), json!(true));
     }
     match client.update_issue(id, Value::Object(payload)) {
-        Ok(_) => output::print_json(json!({ "ok": true })),
+        Ok(()) => output::print_json(json!({ "ok": true })),
         Err(e) => output::print_error(&format!("redmine issue note: {e}")),
     }
 }
@@ -471,9 +479,13 @@ fn update(id: u64, a: IssueUpdateArgs, client: &RedmineClient, cfg: &Config) {
     if payload.is_empty() {
         output::print_error("redmine issue update: at least one field is required");
     }
-    match client.update_issue(id, Value::Object(payload)) {
+    if let Err(e) = client.update_issue(id, Value::Object(payload)) {
+        output::print_error(&format!("redmine issue update: {e}"));
+    }
+    // 갱신 본문 출력은 사용자 경험상 유지한다. PUT 성공 이후의 GET 실패는 별도 메시지로 구분.
+    match client.get_issue(id, &["journals", "attachments", "children", "relations"]) {
         Ok(r) => output::print_json(serde_json::to_value(&r.issue).unwrap_or(json!({}))),
-        Err(e) => output::print_error(&format!("redmine issue update: {e}")),
+        Err(e) => output::print_error(&format!("update succeeded but fetch failed: {e}")),
     }
 }
 
