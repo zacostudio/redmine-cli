@@ -46,45 +46,47 @@ struct IssueListOut {
 }
 
 pub fn handle_search(args: IssuesArgs, client: &RedmineClient, cfg: &Config) {
-    let mut params: Vec<(&str, String)> = Vec::new();
+    let mut params: Vec<(String, String)> = Vec::new();
     if let Some(v) = args.project {
-        params.push(("project_id", v));
+        params.push(("project_id".into(), v));
     }
     if let Some(v) = args.status {
-        params.push(("status_id", v));
+        params.push(("status_id".into(), v));
     }
     if let Some(v) = args.query {
-        params.push(("subject", format!("~{v}")));
+        params.push(("subject".into(), format!("~{v}")));
     }
     if let Some(v) = args.assigned_to {
-        params.push(("assigned_to_id", v));
+        params.push(("assigned_to_id".into(), v));
     }
     if let Some(v) = args.tracker {
-        params.push(("tracker_id", v));
+        params.push(("tracker_id".into(), v));
     }
     if let Some(v) = args.priority {
-        params.push(("priority_id", v));
+        params.push(("priority_id".into(), v));
     }
-    params.push(("limit", args.limit.to_string()));
+    params.push(("limit".into(), args.limit.to_string()));
     if let Some(o) = args.offset {
-        params.push(("offset", o.to_string()));
+        params.push(("offset".into(), o.to_string()));
     }
     if let Some(v) = args.sort {
-        params.push(("sort", v));
+        params.push(("sort".into(), v));
     }
 
-    // custom-field 옵션. cf_<id>=value 쿼리 파라미터 변환.
-    // (&str, String) 형태 유지 위해 key 를 leak 처리한다.
+    // custom-field 옵션. cf_<id>=value 쿼리 파라미터로 변환.
     for spec in args.custom_field {
         let (id, val) = match config::parse_custom_field(&spec, &cfg.cf_aliases) {
             Ok(p) => p,
             Err(e) => output::print_error(&e),
         };
-        let key: &'static str = Box::leak(format!("cf_{id}").into_boxed_str());
-        params.push((key, val));
+        params.push((format!("cf_{id}"), val));
     }
 
-    let resp = match client.search_issues(&params) {
+    let borrowed: Vec<(&str, String)> = params
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.clone()))
+        .collect();
+    let resp = match client.search_issues(&borrowed) {
         Ok(r) => r,
         Err(e) => output::print_error(&format!("redmine issues: {e}")),
     };
