@@ -88,14 +88,38 @@ pub fn load_or_empty(path: Option<PathBuf>) -> Result<FileConfig, ConfigError> {
 }
 
 /// FileConfig 를 config.toml 형식으로 저장한다. 부모 디렉터리는 필요 시 생성한다.
+///
+/// 보안: 토큰이 평문으로 저장되므로 Unix 에서는 0600 (소유자 r/w 만) 으로 생성한다.
+/// `fs::write` 의 기본 0644 와 달리 OpenOptions 로 atomic 하게 모드를 지정해
+/// write 와 chmod 사이의 race 를 차단한다. Windows 는 mode 인자가 무시된다.
 pub fn save(path: &std::path::Path, file: &FileConfig) -> Result<(), ConfigError> {
+    use std::io::Write;
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| ConfigError::Io(parent.to_path_buf(), e.to_string()))?;
     }
     let text =
         toml::to_string(file).map_err(|e| ConfigError::Parse(path.to_path_buf(), e.to_string()))?;
-    std::fs::write(path, text).map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
+    let mut opts = std::fs::OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let mut f = opts
+        .open(path)
+        .map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
+    f.write_all(text.as_bytes())
+        .map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
+    // OpenOptions::mode 는 새 파일에만 적용된다. 0644 로 저장돼 있던 구버전 파일을
+    // 그대로 갱신한 경우에도 0600 으로 강등시키기 위해 명시 chmod 한 번 더 호출한다.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
+            .map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
+    }
     Ok(())
 }
 

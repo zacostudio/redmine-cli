@@ -104,6 +104,18 @@ fn config_alias_round_trip() {
         .assert()
         .success();
 
+    // 보안: 토큰을 평문 보관할 수 있는 파일이므로 Unix 에서는 반드시 0600 이어야 한다.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let meta = std::fs::metadata(&cfg_path).unwrap();
+        assert_eq!(
+            meta.permissions().mode() & 0o777,
+            0o600,
+            "config.toml must be 0600 to protect any stored api_token"
+        );
+    }
+
     // list — now has state=7
     let out = AssertCommand::cargo_bin("redmine")
         .unwrap()
