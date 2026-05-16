@@ -423,4 +423,8 @@ impl RedmineClient {
             &serde_json::json!({ "file": payload }),
         )
     }
+
+    pub fn list_queries(&self) -> Result<QueriesResponse, String> {
+        self.get("/queries.json", &[])
+    }
 }

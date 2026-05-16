@@ -484,3 +484,32 @@ async fn file_list_returns_json() {
     assert_eq!(v["files"][0]["id"], 17);
     assert_eq!(v["files"][0]["filename"], "spec.pdf");
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn query_list_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/queries.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "queries": [
+                {"id": 1, "name": "Open bugs", "is_public": true},
+                {"id": 2, "name": "My tasks", "is_public": false, "project_id": 5}
+            ],
+            "total_count": 2
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["query"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["queries"][0]["name"], "Open bugs");
+    assert_eq!(v["queries"][1]["project_id"], 5);
+}

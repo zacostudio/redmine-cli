@@ -12,6 +12,7 @@ pub mod issues;
 pub mod memberships;
 pub mod news;
 pub mod projects;
+pub mod queries;
 pub mod roles;
 pub mod search;
 pub mod time_entries;
@@ -86,6 +87,8 @@ pub enum Command {
     /// Project files: list/upload.
     #[command(subcommand)]
     File(files::FileCommand),
+    /// List saved issue queries (read-only via REST API).
+    Query,
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -138,6 +141,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Membership(sub) => memberships::handle(sub, client),
         Command::News(sub) => news::handle(sub, client),
         Command::File(sub) => files::handle(sub, client),
+        Command::Query => queries::handle(client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

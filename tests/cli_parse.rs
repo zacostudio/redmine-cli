@@ -270,3 +270,9 @@ fn parses_file_upload() {
         _ => panic!("expected File::Upload"),
     }
 }
+
+#[test]
+fn parses_query() {
+    let cli = parse(&["query"]);
+    assert!(matches!(cli.command, Command::Query));
+}

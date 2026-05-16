@@ -283,6 +283,22 @@ pub struct VersionResponse {
     pub version: RedmineVersion,
 }
 
+// ── Saved Queries ───────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineQuery {
+    pub id: u64,
+    pub name: String,
+    pub is_public: Option<bool>,
+    pub project_id: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct QueriesResponse {
+    pub queries: Vec<RedmineQuery>,
+    pub total_count: Option<u64>,
+}
+
 // ── Files (project) ─────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
