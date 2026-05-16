@@ -62,11 +62,30 @@ fn parses_issue_create_without_id() {
     match cli.command {
         Command::Issue(a) => {
             assert!(a.id.is_none());
-            assert!(matches!(
-                a.sub,
-                Some(redmine_cli::cli::issues::IssueSub::Create(_))
-            ));
+            match a.sub {
+                Some(redmine_cli::cli::issues::IssueSub::Create(c)) => {
+                    // Default for --id-only is false — full JSON output unless explicitly opted in.
+                    assert!(!c.id_only);
+                }
+                _ => panic!("expected Issue Create"),
+            }
         }
+        _ => panic!("expected Issue"),
+    }
+}
+
+#[test]
+fn parses_issue_create_with_id_only() {
+    let cli = parse(&[
+        "issue", "create", "--project", "demo", "--subject", "hi", "--id-only",
+    ]);
+    match cli.command {
+        Command::Issue(a) => match a.sub {
+            Some(redmine_cli::cli::issues::IssueSub::Create(c)) => {
+                assert!(c.id_only);
+            }
+            _ => panic!("expected Issue Create"),
+        },
         _ => panic!("expected Issue"),
     }
 }

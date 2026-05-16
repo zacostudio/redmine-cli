@@ -162,6 +162,13 @@ pub struct IssueCreateArgs {
     pub target_version: Option<u64>,
     #[arg(long = "custom-field", value_name = "ID_OR_ALIAS=VALUE")]
     pub custom_field: Vec<String>,
+    /// Print only the new issue ID followed by a newline, instead of the
+    /// full JSON. Designed so shell scripts can do `id=$(redmine issue
+    /// create ... --id-only)` without piping through `jq` / `python -c`
+    /// (whose own parse failures used to be mistaken for create failures,
+    /// causing duplicate issues on retry).
+    #[arg(long = "id-only", default_value_t = false)]
+    pub id_only: bool,
 }
 
 #[derive(Args, Debug, Default, Clone)]
@@ -328,7 +335,13 @@ fn create(a: IssueCreateArgs, client: &RedmineClient, cfg: &Config) {
     }
 
     match client.create_issue(Value::Object(payload)) {
-        Ok(r) => output::print_json(serde_json::to_value(&r.issue).unwrap_or(json!({}))),
+        Ok(r) => {
+            if a.id_only {
+                println!("{}", r.issue.id);
+            } else {
+                output::print_json(serde_json::to_value(&r.issue).unwrap_or(json!({})));
+            }
+        }
         Err(e) => output::print_error(&format!("redmine issue create: {e}")),
     }
 }

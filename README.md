@@ -44,8 +44,19 @@ redmine projects
 redmine issues --project myproj --status 1
 redmine issue 1234
 redmine issue create --project myproj --subject "..." --description "..."
+
+# Print just the new issue ID — safe for shell scripting.
+id=$(redmine issue create --project myproj --subject "..." --id-only)
+
 redmine time-entry create --issue 1234 --hours 2.5 --comment "..."
 ```
+
+The default `issue create` output is the full JSON of the created issue
+(unwrapped — fields live at the top level, not under `{"issue": ...}`).
+Use `--id-only` when scripting: it bypasses JSON parsing entirely, so a
+broken `jq` / `python -c` pipeline on the caller side can no longer be
+mistaken for a failed create — which would otherwise tempt the caller to
+retry and produce a duplicate issue.
 
 ### Manage aliases
 
