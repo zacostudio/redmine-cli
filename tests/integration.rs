@@ -280,3 +280,57 @@ async fn search_returns_json() {
     assert_eq!(v["results"][0]["id"], 9);
     assert_eq!(v["results"][0]["type"], "issue");
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn version_list_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/projects/demo/versions.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "versions": [
+                {"id": 11, "project": {"id": 1, "name": "demo"}, "name": "v1.0", "status": "open"}
+            ],
+            "total_count": 1
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["version", "list", "demo"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["total_count"], 1);
+    assert_eq!(v["versions"][0]["id"], 11);
+    assert_eq!(v["versions"][0]["name"], "v1.0");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn version_create_posts_and_returns_json() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/projects/demo/versions.json"))
+        .respond_with(ResponseTemplate::new(201).set_body_json(serde_json::json!({
+            "version": {"id": 22, "project": {"id": 1, "name": "demo"}, "name": "v2.0", "status": "open"}
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .env("REDMINE_URL", server.uri())
+        .env("REDMINE_API_TOKEN", "secret")
+        .args(["version", "create", "demo", "--name", "v2.0"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["id"], 22);
+    assert_eq!(v["name"], "v2.0");
+}

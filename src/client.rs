@@ -302,4 +302,34 @@ impl RedmineClient {
     pub fn search(&self, params: &[(&str, String)]) -> Result<SearchResponse, String> {
         self.get("/search.json", params)
     }
+
+    pub fn list_versions(&self, project_id: &str) -> Result<VersionsResponse, String> {
+        self.get(&format!("/projects/{}/versions.json", project_id), &[])
+    }
+
+    pub fn get_version(&self, id: u64) -> Result<VersionResponse, String> {
+        self.get(&format!("/versions/{}.json", id), &[])
+    }
+
+    pub fn create_version(
+        &self,
+        project_id: &str,
+        payload: serde_json::Value,
+    ) -> Result<VersionResponse, String> {
+        self.post(
+            &format!("/projects/{}/versions.json", project_id),
+            &serde_json::json!({ "version": payload }),
+        )
+    }
+
+    pub fn update_version(&self, id: u64, payload: serde_json::Value) -> Result<(), String> {
+        self.put_no_content(
+            &format!("/versions/{}.json", id),
+            &serde_json::json!({ "version": payload }),
+        )
+    }
+
+    pub fn delete_version(&self, id: u64) -> Result<(), String> {
+        self.delete(&format!("/versions/{}.json", id))
+    }
 }

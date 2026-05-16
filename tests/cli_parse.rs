@@ -170,3 +170,27 @@ fn parses_search() {
         _ => panic!("expected Search"),
     }
 }
+
+#[test]
+fn parses_version_list() {
+    let cli = parse(&["version", "list", "demo"]);
+    match cli.command {
+        Command::Version(redmine_cli::cli::versions::VersionCommand::List(a)) => {
+            assert_eq!(a.project, "demo");
+        }
+        _ => panic!("expected Version::List"),
+    }
+}
+
+#[test]
+fn parses_version_create() {
+    let cli = parse(&["version", "create", "demo", "--name", "v2", "--due-date", "2026-12-31"]);
+    match cli.command {
+        Command::Version(redmine_cli::cli::versions::VersionCommand::Create(a)) => {
+            assert_eq!(a.project, "demo");
+            assert_eq!(a.name, "v2");
+            assert_eq!(a.due_date.as_deref(), Some("2026-12-31"));
+        }
+        _ => panic!("expected Version::Create"),
+    }
+}

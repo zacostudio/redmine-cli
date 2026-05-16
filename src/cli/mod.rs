@@ -13,6 +13,7 @@ pub mod roles;
 pub mod search;
 pub mod time_entries;
 pub mod users;
+pub mod versions;
 
 use crate::client::RedmineClient;
 use crate::config::{self, CliOverrides, Config};
@@ -70,6 +71,9 @@ pub enum Command {
     CustomFields,
     /// Global search across issues, news, wiki, etc.
     Search(search::SearchArgs),
+    /// Project versions (milestones): list/show/create/update/delete.
+    #[command(subcommand)]
+    Version(versions::VersionCommand),
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
@@ -118,6 +122,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::DocumentCategories => enums::document_categories(client),
         Command::CustomFields => custom_fields::handle(client),
         Command::Search(a) => search::handle(a, client),
+        Command::Version(sub) => versions::handle(sub, client),
         Command::Attachment(sub) => attachments::handle(sub, client),
         Command::Config(_) => unreachable!("handled in run() before client setup"),
     }

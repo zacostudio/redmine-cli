@@ -256,6 +256,33 @@ pub struct RedmineDocumentCategory {
     pub is_default: Option<bool>,
 }
 
+// ── Versions ────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedmineVersion {
+    pub id: u64,
+    pub project: Option<IdName>,
+    pub name: String,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub due_date: Option<String>,
+    pub sharing: Option<String>,
+    pub wiki_page_title: Option<String>,
+    pub created_on: Option<String>,
+    pub updated_on: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VersionsResponse {
+    pub versions: Vec<RedmineVersion>,
+    pub total_count: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VersionResponse {
+    pub version: RedmineVersion,
+}
+
 // ── Search ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize)]
