@@ -6,6 +6,8 @@
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 ## [Unreleased]
+
+## [0.4.0] - 2026-08-29
 ### Added
 - Redmine 서버를 여러 개 설정하고 `--server <name>` 으로 골라 쓸 수 있다. 회사 Redmine 과 개인 Redmine 을 이름으로 구분한다. (57e7186)
 - `config server list` — 설정된 서버 목록. API 토큰은 출력하지 않는다. (57e7186)
@@ -97,7 +99,8 @@
 - 설정 우선순위(플래그 > 환경변수 > TOML)와 커스텀 필드 alias 파서.
 - macOS(aarch64/x86_64) 및 Linux(x86_64)용 바이너리 릴리스 워크플로우.
 
-[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/zacostudio/redmine-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/zacostudio/redmine-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/zacostudio/redmine-cli/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/zacostudio/redmine-cli/compare/v0.1.1...v0.1.2
