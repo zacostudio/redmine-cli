@@ -115,7 +115,7 @@ stdin 으로 읽는다(`src/cli/issues.rs:337`, `src/cli/wiki.rs:108`). 토큰�
 안 쓰는 global flag(`--server` 를 config server add 에 준 경우 등)를 조용히 무시하는 것도
 그대로 뒀다 — 에러로 만들면 스크립트가 flag 를 일괄로 붙이는 흔한 사용을 깨뜨린다.
 
-## 2026-08-29 설정 경로를 ~/.config 로 통일 (0.5.0)
+## 2026-08-29 설정 경로를 ~/.config 로 통일 (0.4.1)
 
 `directories` 크레이트가 주는 OS 표준 경로를 쓰면 macOS 만 `~/Library/Application Support` 로
 갈라진다. 사용자가 "Linux 와 같은 위치를 쓰면 안 되냐" 고 물었고, 실제로 설정을 손으로 열거나
@@ -128,3 +128,14 @@ env 를 세팅하는 테스트는 병렬 실행에서 서로를 덮어쓴다.
 
 0.4.0 이 쓰던 macOS 경로에 파일이 남아 있으면 에러가 `mv` 명령까지 알려준다. 자동으로 옮기지는
 않는다. 자동 이동은 사용자가 모르는 사이에 파일이 사라지는 일이고, 이 파일에는 토큰이 들어 있다.
+
+## 2026-08-29 버전 번호 규칙
+
+경로 변경을 breaking change 로 보고 0.5.0 을 올렸다가 지적받았다. **이 저장소의 규칙은 기본
+patch 이고, minor/major 는 사용자가 명시적으로 지시할 때만 올린다.** conventional commit 의
+`feat:` → minor 매핑을 자동 적용하지 않는다. `.claude/skills/release/SKILL.md` 단계 1 에 그
+매핑이 적혀 있지만, 이 지시가 우선한다.
+
+게시까지 간 v0.5.0 릴리스와 태그는 사용자 확인을 받고 삭제한 뒤 v0.4.1 로 다시 냈다. master 는
+force-push 하지 않았고, "chore: release v0.5.0" 커밋은 기록으로 남긴 채 뒤 커밋에서 0.4.1 로
+정정했다.

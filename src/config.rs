@@ -288,7 +288,7 @@ fn home_dir() -> Option<std::ffi::OsString> {
     std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))
 }
 
-/// 0.4.0 이 쓰던 macOS 표준 위치. 0.5.0 에서 `~/.config` 로 옮겨졌고, 남아 있으면 안내만 한다.
+/// 0.4.0 이 쓰던 macOS 표준 위치. 0.4.1 에서 `~/.config` 로 옮겨졌고, 남아 있으면 안내만 한다.
 #[cfg(target_os = "macos")]
 fn legacy_macos_config_path() -> Option<PathBuf> {
     home_dir().map(|h| {

@@ -91,7 +91,7 @@ redmine --api-token-file ./token config server add company --url https://redmine
 ### 0.4.0 에서 올라오는 경우
 
 0.4.0 은 macOS 에서 `~/Library/Application Support/redmine-cli/config.yml` 을 썼습니다.
-0.5.0 부터는 Linux 와 같은 `~/.config` 를 쓰므로 파일을 옮겨 주세요. 옮기지 않으면 첫 실행
+0.4.1 부터는 Linux 와 같은 `~/.config` 를 쓰므로 파일을 옮겨 주세요. 옮기지 않으면 첫 실행
 에러가 예전 경로와 `mv` 명령을 알려 줍니다.
 
 ```bash
