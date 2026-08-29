@@ -105,7 +105,8 @@
 - 설정 우선순위(플래그 > 환경변수 > TOML)와 커스텀 필드 alias 파서.
 - macOS(aarch64/x86_64) 및 Linux(x86_64)용 바이너리 릴리스 워크플로우.
 
-[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/zacostudio/redmine-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/zacostudio/redmine-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/zacostudio/redmine-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/zacostudio/redmine-cli/compare/v0.1.2...v0.2.0
