@@ -178,8 +178,8 @@ fn token_for_add(api_token: Option<String>, existing: Option<&str>) -> String {
 
 /// 저장 시점에 막지 않으면 이후 모든 명령이 "invalid API key" 로 실패한다. 원인에서 먼 에러다.
 fn validated_token(token: String) -> String {
-    if token.chars().any(|c| c.is_whitespace() || c.is_control()) {
-        output::print_error("API token must not contain whitespace or line breaks");
+    if let Err(e) = config::validate_token(&token) {
+        output::print_error(&e);
     }
     token
 }

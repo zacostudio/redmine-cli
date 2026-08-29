@@ -706,6 +706,129 @@ fn config_server_remove_reports_the_new_default() {
     assert!(leftovers.is_empty(), "임시 파일 잔여물: {leftovers:?}");
 }
 
+#[tokio::test(flavor = "current_thread")]
+async fn api_token_file_keeps_the_token_off_argv() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/issues.json"))
+        .and(header("X-Redmine-API-Key", "filetok"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "issues": [], "total_count": 0
+        })))
+        .mount(&server)
+        .await;
+
+    let tmp = tempfile::tempdir().unwrap();
+    let token_file = tmp.path().join("token");
+    // 끝의 개행은 흔한 실수라 자동으로 잘라낸다.
+    std::fs::write(&token_file, "filetok\n").unwrap();
+    let cfg = tmp.path().join("config.yml");
+
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg.to_str().unwrap()])
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token-file", token_file.to_str().unwrap(), "issues"])
+        .assert()
+        .success();
+
+    // --api-token 과 동시에 주면 어느 쪽이 이겼는지 알 수 없으므로 거부한다.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg.to_str().unwrap()])
+        .arg("--server-url")
+        .arg(server.uri())
+        .args([
+            "--api-token",
+            "x",
+            "--api-token-file",
+            token_file.to_str().unwrap(),
+            "issues",
+        ])
+        .assert()
+        .failure();
+
+    // 여러 줄이 든 파일은 헤더로 만들 수 없다.
+    let bad = tmp.path().join("bad");
+    std::fs::write(&bad, "tok\nextra\n").unwrap();
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg.to_str().unwrap()])
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token-file", bad.to_str().unwrap(), "issues"])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("token"), "{stderr}");
+
+    // 없는 파일은 경로를 알려준다.
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg.to_str().unwrap()])
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token-file", "/nonexistent/token", "issues"])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("/nonexistent/token"), "{stderr}");
+}
+
+#[test]
+fn config_server_add_accepts_a_token_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    let token_file = tmp.path().join("token");
+    std::fs::write(&token_file, "filetok\n").unwrap();
+
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg_path.to_str().unwrap(),
+            "--api-token-file",
+            token_file.to_str().unwrap(),
+            "config",
+            "server",
+            "add",
+            "a",
+            "--url",
+            "https://a.invalid",
+        ])
+        .assert()
+        .success();
+    let yml = std::fs::read_to_string(&cfg_path).unwrap();
+    assert!(yml.contains("api_token: filetok\n"), "{yml}");
+}
+
+#[test]
+fn leftover_config_toml_is_named_in_the_error() {
+    let tmp = tempfile::tempdir().unwrap();
+    let toml_path = tmp.path().join("config.toml");
+    let yml_path = tmp.path().join("config.yml");
+    std::fs::write(&toml_path, "server_url = \"https://old.invalid\"\n").unwrap();
+
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", yml_path.to_str().unwrap(), "issues"])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("config.toml"),
+        "옆에 있는 옛 파일을 알려야 한다: {stderr}"
+    );
+    assert!(
+        stderr.contains("config server add"),
+        "옮기는 방법까지 알려야 한다: {stderr}"
+    );
+    // 읽지 않고 존재만 본다. 파일은 그대로 남는다.
+    assert!(toml_path.exists());
+    assert!(!yml_path.exists());
+}
+
 #[test]
 fn empty_config_reports_no_server_configured() {
     let tmp = tempfile::tempdir().unwrap();

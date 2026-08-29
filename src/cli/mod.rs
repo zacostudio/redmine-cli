@@ -38,9 +38,14 @@ pub struct Cli {
     pub server_url: Option<String>,
 
     /// Override the API token of the selected server (also the token stored by
-    /// `config server add`).
+    /// `config server add`). Visible in ps and shell history — prefer
+    /// --api-token-file or config.yml for regular use.
     #[arg(long, global = true)]
     pub api_token: Option<String>,
+
+    /// Read the API token from a file instead of the command line.
+    #[arg(long, global = true, conflicts_with = "api_token")]
+    pub api_token_file: Option<std::path::PathBuf>,
 
     /// Path to config.yml (defaults to the per-user config dir).
     #[arg(long, global = true)]
@@ -57,6 +62,7 @@ impl std::fmt::Debug for Cli {
             .field("server", &self.server)
             .field("server_url", &self.server_url)
             .field("api_token", &self.api_token.as_ref().map(|_| "<REDACTED>"))
+            .field("api_token_file", &self.api_token_file)
             .field("config", &self.config)
             .field("command", &self.command)
             .finish()
@@ -127,18 +133,39 @@ pub enum Command {
     Config(config_cmd::ConfigCommand),
 }
 
+/// --api-token-file 을 읽어 --api-token 과 같은 자리로 합친다. 토큰을 argv 에 올리지 않으려는
+/// 경로이므로, 파일이 없거나 내용이 헤더로 쓸 수 없으면 여기서 끝낸다.
+fn token_from_file(path: &std::path::Path) -> String {
+    let text = match std::fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) => output::print_error(&format!(
+            "failed to read API token file at {}: {e}",
+            path.display()
+        )),
+    };
+    let token = text.trim().to_string();
+    if let Err(e) = config::validate_token(&token) {
+        output::print_error(&format!("{} (from {})", e, path.display()));
+    }
+    token
+}
+
 pub fn run(cli: Cli) {
     let config_path_override = cli.config.clone();
+    let api_token = match &cli.api_token_file {
+        Some(p) => Some(token_from_file(p)),
+        None => cli.api_token,
+    };
 
     // config 서브커맨드는 Redmine 자격증명 없이 동작한다.
     if let Command::Config(sub) = cli.command {
-        return config_cmd::handle(sub, config_path_override, cli.server, cli.api_token);
+        return config_cmd::handle(sub, config_path_override, cli.server, api_token);
     }
 
     let overrides = CliOverrides {
         server: cli.server,
         server_url: cli.server_url,
-        api_token: cli.api_token,
+        api_token,
         config_path: cli.config,
     };
     let cfg: Config = match config::resolve(&overrides) {

@@ -79,12 +79,7 @@ clap 이 중복으로 죽는다. 덕분에 `redmine --api-token xxx config serve
 적용하면 **엉뚱한 custom field id 로 값이 나간다.** 잘못된 값을 쓰는 것보다 `unknown custom
 field alias` 로 멈추는 편이 안전하다. README 에 명시하고 `--server` 를 함께 주는 방법을 적었다.
 
-**고치지 않은 것 2 — `--api-token` 이 argv 에 노출되는 것.** flag 자체는 이전부터 있었고, env 를
-없애면서 눈에 띄게 됐을 뿐이다. 모든 명령에 stdin 토큰 입력을 다는 건 범위가 다르다. README 에
-주의만 적었다.
-
-**고치지 않은 것 3 — config.toml 안내.** "config.yml 만 사용" 이 사용자 지시였다. 존재 여부를
-확인하는 한 줄이라도 다시 config.toml 을 아는 코드가 되므로 넣지 않았다.
+**2, 3 은 같은 날 사용자 요청으로 다시 열어 처리했다.** (아래 절 참고)
 
 **deny_unknown_fields 를 켠 이유.** 오타 난 키(`api-token`, `custom_field`)가 조용히 무시되면
 증상이 원인에서 멀어진다("토큰 없음", "alias 없음"). 게다가 전체 rewrite 방식이라 다음 저장에서
@@ -92,3 +87,15 @@ field alias` 로 멈추는 편이 안전하다. README 에 명시하고 `--serve
 
 **save 를 임시 파일 + rename 으로 바꾼 이유.** env 폴백을 없앤 뒤로 이 파일 하나가 모든 서버
 토큰의 유일한 사본이다. 예전에는 쓰다 말아도 env 로 계속 쓸 수 있었지만 지금은 복구할 곳이 없다.
+
+## 2026-08-29 토큰 파일 입력과 legacy 안내
+
+**`--api-token-file` 을 골랐고 stdin 은 쓰지 않았다.** `issue create` 와 `wiki` 가 이미 본문을
+stdin 으로 읽는다(`src/cli/issues.rs:337`, `src/cli/wiki.rs:108`). 토큰까지 stdin 으로 받으면
+같은 명령에서 둘이 충돌한다. 파일 경로 방식은 CI 의 secret 마운트와도 그대로 맞는다.
+`--api-token` 과는 `conflicts_with` 로 묶어, 어느 쪽이 이겼는지 모르는 상태를 없앴다.
+
+**config.toml 안내는 존재 확인 한 줄이다.** 파일을 열지 않고 `path.with_extension("toml")` 의
+존재만 본다. toml 파서도 의존성도 돌아오지 않는다 — 설정 포맷은 config.yml 하나이고, 이 메시지는
+오히려 "남은 파일을 하나로 옮기라" 고 말하는 쪽이다. 사용자가 포맷 이원화를 명확히 거부했으므로
+문구도 "더 이상 읽지 않는다 + 옮기는 명령" 으로 적었다.

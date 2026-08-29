@@ -12,6 +12,7 @@
 - `config server use <name>` — `--server` 없이 쓸 기본 서버 지정. (57e7186)
 - `config server add <name> --url <url>` — 서버 추가. 토큰은 `--api-token` 또는 stdin 으로 받는다(셸 히스토리에 남기지 않으려는 용도). 첫 서버는 자동으로 기본 서버가 되고, 같은 이름은 `--force` 없이는 덮어쓰지 않는다.
 - `config server remove <name>` — 서버 삭제. 기본 서버였다면 `default_server` 도 함께 비운다.
+- `--api-token-file <path>` — 토큰을 파일에서 읽는다. `--api-token` 이 `ps` 와 셸 히스토리에 남는 문제를 피하기 위한 경로이며, `--api-token` 과 동시에 쓸 수 없다. `config server add` 도 이 값을 쓴다.
 
 ### Changed
 - **BREAKING**: 설정 파일이 `config.toml` 에서 `config.yml` 로 바뀌었다. `config.toml` 은 읽지 않으며 자동 변환도 하지 않는다. `config.yml` 을 새로 작성해야 한다. (57e7186, b51c4a7)
@@ -31,6 +32,7 @@
 - `config server add --force` 가 토큰을 다시 요구하지 않는다. URL 만 갱신할 수 있다.
 - `config alias set` 이 숫자 이름과 `=` 가 들어간 이름을 거부한다. `--custom-field` 해석 규칙상 영영 도달할 수 없는 alias 였고, 숫자 이름은 조용히 다른 custom field id 로 나갔다.
 - `config.yml` 에 모르는 키가 있으면 읽기 단계에서 에러를 낸다. `api-token` 같은 오타가 무시되다가 "토큰 없음" 으로 나타나던 문제.
+- 설정이 비어 있고 옆에 0.3.0 의 `config.toml` 이 남아 있으면 에러가 그 사실과 옮기는 방법을 알려준다. 파일을 읽지는 않으며 설정 포맷은 `config.yml` 하나다.
 - `config server use/remove` 가 빈 설정에서 `available: ` 만 출력하던 문제. 이제 만들어야 할 파일 경로를 알려준다.
 - `config server remove` 출력에 삭제 후 `default_server` 상태를 포함한다.
 - CI 워크플로의 push 트리거가 `main` 을 보고 있어 기본 브랜치 `master` 푸시에 CI 가 돌지 않던 문제. (af41a0a)

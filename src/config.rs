@@ -93,6 +93,11 @@ pub enum ConfigError {
     MissingToken,
     #[error("no Redmine server configured in {0} (add a servers: entry, or pass both --server-url and --api-token)")]
     NoServerConfigured(PathBuf),
+    #[error(
+        "no Redmine server configured in {yml}; the old {toml} from 0.3.0 is no longer read. \
+         Move it over with: redmine config server add <name> --url <url> --api-token <token>"
+    )]
+    LegacyTomlPresent { yml: PathBuf, toml: PathBuf },
     #[error("Redmine server '{name}' not found in config (available: {available})")]
     ServerNotFound { name: String, available: String },
     #[error("default_server '{name}' is not in servers (available: {available})")]
@@ -103,6 +108,30 @@ pub enum ConfigError {
     Io(PathBuf, String),
     #[error("failed to parse config file at {0}: {1}")]
     Parse(PathBuf, String),
+}
+
+/// 설정이 비었을 때의 에러. 옆에 0.3.0 의 config.toml 이 남아 있으면 그 사실을 알린다.
+/// 파일을 열지는 않는다 — 존재 여부만 본다. 설정 포맷은 config.yml 하나다.
+fn no_server_configured(path: &Path) -> ConfigError {
+    let legacy = path.with_extension("toml");
+    match legacy.exists() {
+        true => ConfigError::LegacyTomlPresent {
+            yml: path.to_path_buf(),
+            toml: legacy,
+        },
+        false => ConfigError::NoServerConfigured(path.to_path_buf()),
+    }
+}
+
+/// API 토큰은 그대로 HTTP 헤더가 된다. 공백·개행이 섞이면 요청 자체를 만들 수 없다.
+pub fn validate_token(token: &str) -> Result<(), String> {
+    if token.is_empty() {
+        return Err("API token must not be empty".to_string());
+    }
+    if token.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err("API token must not contain whitespace or line breaks".to_string());
+    }
+    Ok(())
 }
 
 fn names(file: &FileConfig) -> String {
@@ -116,7 +145,7 @@ pub fn select_server_name(
     path: &Path,
 ) -> Result<String, ConfigError> {
     if file.servers.is_empty() {
-        return Err(ConfigError::NoServerConfigured(path.to_path_buf()));
+        return Err(no_server_configured(path));
     }
     if let Some(name) = requested {
         return match file.servers.contains_key(name) {
@@ -148,7 +177,7 @@ pub fn select_server_name(
 /// 이름이 실제로 있는지 확인한다. server use/remove 처럼 해석이 아니라 지목이 필요한 곳에서 쓴다.
 pub fn ensure_server_exists(file: &FileConfig, name: &str, path: &Path) -> Result<(), ConfigError> {
     if file.servers.is_empty() {
-        return Err(ConfigError::NoServerConfigured(path.to_path_buf()));
+        return Err(no_server_configured(path));
     }
     match file.servers.contains_key(name) {
         true => Ok(()),

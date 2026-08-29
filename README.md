@@ -79,14 +79,21 @@ redmine --server-url https://other.example.com --api-token zzzz projects
 redmine --server company --server-url https://staging.example.com issues   # alias 는 company 것
 ```
 
-참고: `--api-token` 은 인자로 노출되므로 `ps` 와 셸 히스토리에 남습니다. 상시 사용은 `config.yml`
-에 저장하는 쪽이 안전합니다.
+`--api-token` 은 인자로 노출되므로 `ps` 와 셸 히스토리에 남습니다. CI 나 스크립트에서는
+`--api-token-file` 로 파일에서 읽으세요. 파일 끝의 개행은 잘라내고, 공백이나 개행이 섞인 값은
+저장/사용 전에 거부합니다.
+
+```bash
+redmine --server-url https://redmine.example.com --api-token-file /run/secrets/redmine issues
+redmine --api-token-file ./token config server add company --url https://redmine.example.com
+```
 
 ### 0.3.0 이하에서 올라오는 경우
 
-설정 파일은 `config.yml` 하나만 읽습니다. 예전 `config.toml` 과 `REDMINE_URL` /
-`REDMINE_API_TOKEN` 환경 변수는 더 이상 사용하지 않습니다. 환경 변수를 쓰고 있었다면 한 줄로
-옮길 수 있습니다.
+설정 파일은 `config.yml` **하나**입니다. 예전 `config.toml` 과 `REDMINE_URL` /
+`REDMINE_API_TOKEN` 환경 변수는 더 이상 사용하지 않습니다. `config.toml` 이 남아 있으면 첫
+실행 에러에서 그 사실과 옮기는 방법을 알려 줍니다(파일을 읽지는 않습니다). 환경 변수를 쓰고
+있었다면 한 줄로 옮길 수 있습니다.
 
 ```bash
 printf '%s' "$REDMINE_API_TOKEN" | redmine config server add company --url "$REDMINE_URL"
