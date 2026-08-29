@@ -287,6 +287,180 @@ async fn credential_flags_do_not_read_the_config_file() {
 }
 
 #[test]
+fn config_server_add_creates_file_and_sets_first_as_default() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    let cfg = cfg_path.to_str().unwrap();
+
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg,
+            "--api-token",
+            "ctok",
+            "config",
+            "server",
+            "add",
+            "company",
+            "--url",
+            "https://company.invalid",
+        ])
+        .assert()
+        .success();
+
+    assert!(cfg_path.exists());
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let meta = std::fs::metadata(&cfg_path).unwrap();
+        assert_eq!(meta.permissions().mode() & 0o777, 0o600);
+    }
+
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "list"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    assert!(
+        !stdout.contains("ctok"),
+        "토큰이 출력되면 안 된다: {stdout}"
+    );
+    let v: Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(v["default_server"], "company", "첫 서버는 기본 서버가 된다");
+    assert_eq!(v["servers"][0]["url"], "https://company.invalid");
+
+    // 두 번째 서버는 기본값을 바꾸지 않는다.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg,
+            "--api-token",
+            "ptok",
+            "config",
+            "server",
+            "add",
+            "personal",
+            "--url",
+            "https://personal.invalid",
+        ])
+        .assert()
+        .success();
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "list"])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(v["default_server"], "company");
+    assert_eq!(v["servers"].as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn config_server_add_rejects_duplicate_unless_forced() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    let cfg = cfg_path.to_str().unwrap();
+    let add = |url: &str, force: bool| {
+        let mut c = AssertCommand::cargo_bin("redmine").unwrap();
+        c.args([
+            "--config",
+            cfg,
+            "--api-token",
+            "ctok",
+            "config",
+            "server",
+            "add",
+            "company",
+            "--url",
+            url,
+        ]);
+        if force {
+            c.arg("--force");
+        }
+        c
+    };
+
+    add("https://one.invalid", false).assert().success();
+    let out = add("https://two.invalid", false).assert().failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("already exists"), "{stderr}");
+
+    add("https://two.invalid", true).assert().success();
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "list"])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(v["servers"][0]["url"], "https://two.invalid");
+}
+
+#[test]
+fn config_server_add_reads_token_from_stdin() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg_path.to_str().unwrap(),
+            "config",
+            "server",
+            "add",
+            "company",
+            "--url",
+            "https://company.invalid",
+        ])
+        .write_stdin("stok\n")
+        .assert()
+        .success();
+
+    // trim 되지 않았다면 serde 가 따옴표로 감싸 escape 하므로 이 형태가 나오지 않는다.
+    let yml = std::fs::read_to_string(&cfg_path).unwrap();
+    assert!(
+        yml.contains("api_token: stok\n"),
+        "stdin 토큰이 그대로 저장돼야 한다: {yml}"
+    );
+}
+
+#[test]
+fn config_server_remove_clears_the_default() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    write_config(&cfg_path, "https://company.invalid");
+    let cfg = cfg_path.to_str().unwrap();
+
+    // 없는 서버는 에러.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "remove", "nope"])
+        .assert()
+        .failure();
+
+    // 기본 서버(company)를 지우면 default_server 도 비워진다.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "remove", "company"])
+        .assert()
+        .success();
+
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "list"])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(v["default_server"].is_null());
+    let servers = v["servers"].as_array().unwrap();
+    assert_eq!(servers.len(), 1);
+    assert_eq!(servers[0]["name"], "personal");
+}
+
+#[test]
 fn empty_config_reports_no_server_configured() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg_path = tmp.path().join("config.yml");

@@ -10,6 +10,8 @@
 - Redmine 서버를 여러 개 설정하고 `--server <name>` 으로 골라 쓸 수 있다. 회사 Redmine 과 개인 Redmine 을 이름으로 구분한다. (57e7186)
 - `config server list` — 설정된 서버 목록. API 토큰은 출력하지 않는다. (57e7186)
 - `config server use <name>` — `--server` 없이 쓸 기본 서버 지정. (57e7186)
+- `config server add <name> --url <url>` — 서버 추가. 토큰은 `--api-token` 또는 stdin 으로 받는다(셸 히스토리에 남기지 않으려는 용도). 첫 서버는 자동으로 기본 서버가 되고, 같은 이름은 `--force` 없이는 덮어쓰지 않는다.
+- `config server remove <name>` — 서버 삭제. 기본 서버였다면 `default_server` 도 함께 비운다.
 
 ### Changed
 - **BREAKING**: 설정 파일이 `config.toml` 에서 `config.yml` 로 바뀌었다. `config.toml` 은 읽지 않으며 자동 변환도 하지 않는다. `config.yml` 을 새로 작성해야 한다. (57e7186, b51c4a7)

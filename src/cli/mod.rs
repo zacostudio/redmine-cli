@@ -37,7 +37,8 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub server_url: Option<String>,
 
-    /// Override the API token of the selected server.
+    /// Override the API token of the selected server (also the token stored by
+    /// `config server add`).
     #[arg(long, global = true)]
     pub api_token: Option<String>,
 
@@ -131,7 +132,7 @@ pub fn run(cli: Cli) {
 
     // config 서브커맨드는 Redmine 자격증명 없이 동작한다.
     if let Command::Config(sub) = cli.command {
-        return config_cmd::handle(sub, config_path_override, cli.server);
+        return config_cmd::handle(sub, config_path_override, cli.server, cli.api_token);
     }
 
     let overrides = CliOverrides {

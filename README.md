@@ -41,6 +41,22 @@ servers:
 파일에는 평문 토큰이 들어가므로 CLI 가 저장할 때 Unix 에서 0600 으로 만듭니다. 직접 만들 때도
 `chmod 600` 을 권장합니다.
 
+### 서버 추가·삭제
+
+```bash
+# 토큰을 인자로 주는 방식
+redmine config server add company --url https://redmine.example.com --api-token xxxx
+
+# 셸 히스토리에 토큰을 남기지 않으려면 stdin 으로
+pbpaste | redmine config server add personal --url https://redmine.home.net
+
+redmine config server remove personal
+```
+
+첫 서버는 자동으로 `default_server` 가 됩니다. 같은 이름이 이미 있으면 에러이고, `--force` 를
+주면 덮어씁니다(이 경우 그 서버의 alias 는 유지됩니다). 기본 서버를 삭제하면 `default_server`
+도 함께 비워집니다.
+
 ### 서버 고르기
 
 ```bash
@@ -63,8 +79,12 @@ redmine --server-url https://other.example.com --api-token zzzz projects
 ### 0.3.0 이하에서 올라오는 경우
 
 설정 파일은 `config.yml` 하나만 읽습니다. 예전 `config.toml` 과 `REDMINE_URL` /
-`REDMINE_API_TOKEN` 환경 변수는 더 이상 사용하지 않으므로, 위 형식으로 `config.yml` 을 새로
-만들어 주세요.
+`REDMINE_API_TOKEN` 환경 변수는 더 이상 사용하지 않습니다. 환경 변수를 쓰고 있었다면 한 줄로
+옮길 수 있습니다.
+
+```bash
+printf '%s' "$REDMINE_API_TOKEN" | redmine config server add company --url "$REDMINE_URL"
+```
 
 ## Usage
 
