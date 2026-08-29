@@ -6,6 +6,20 @@
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 ## [Unreleased]
+### Added
+- Redmine 서버를 여러 개 설정하고 `--server <name>` 으로 골라 쓸 수 있다. 회사 Redmine 과 개인 Redmine 을 이름으로 구분한다. (57e7186)
+- `config server list` — 설정된 서버 목록. API 토큰은 출력하지 않는다. (57e7186)
+- `config server use <name>` — `--server` 없이 쓸 기본 서버 지정. (57e7186)
+
+### Changed
+- **BREAKING**: 설정 파일이 `config.toml` 에서 `config.yml` 로 바뀌었다. `config.yml` 이 없고 `config.toml` 만 있으면 첫 실행에서 `servers.default` 로 1회 자동 변환하고, 원본 `config.toml` 은 그대로 남긴다. (57e7186)
+- **BREAKING**: `REDMINE_URL` / `REDMINE_API_TOKEN` 환경 변수를 더 이상 읽지 않는다. 자격증명은 `config.yml` 또는 `--server-url` / `--api-token` 으로만 지정한다. (57e7186)
+- custom field alias 가 서버별로 분리됐다. `config alias set/remove/list` 는 선택된 서버(`--server` 또는 `default_server`)에만 적용된다. (57e7186)
+- `--server-url` / `--api-token` 은 선택된 서버의 해당 필드를 덮어쓴다. `--server` 없이 둘 다 주면 설정 파일과 무관한 ad-hoc 호출이 된다. (57e7186)
+- `config::parse_custom_field` 의 alias 인자가 `HashMap` 에서 `BTreeMap` 으로 바뀌었다. 저장 시 줄 순서를 고정해 diff 를 읽을 수 있게 하기 위해서다. **라이브러리 사용자 영향.** (57e7186)
+
+### Fixed
+- CI 워크플로의 push 트리거가 `main` 을 보고 있어 기본 브랜치 `master` 푸시에 CI 가 돌지 않던 문제. (af41a0a)
 
 ## [0.3.0] - 2026-05-16
 ### Added

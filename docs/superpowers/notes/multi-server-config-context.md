@@ -30,3 +30,17 @@ CLI 는 저장하는 상태가 없으므로 id 가 필요 없고, map 이면 이
 `.github/workflows/ci.yml` 의 push 트리거가 `[main]` 이라 master 푸시에 CI 가 돌지 않고 있었다.
 audit.yml 의 `[main, master]` 와 함께 `[master]` 로 통일했다 (af41a0a). 이 저장소의 기본 브랜치는
 master 이고 리모트에도 master 만 있다.
+
+## 2026-08-29 구현 중 결정
+
+**`resolve_from` 을 파일 I/O 에서 분리했다.** 선택 규칙이 이 프로젝트에서 가장 헷갈리는 부분인데,
+파일과 엮여 있으면 tempdir 없이는 한 갈래도 검증할 수 없다. 지금은 단위 테스트가 `FileConfig` 를
+직접 만들어 4갈래를 전부 찌른다.
+
+**에러 문구에 설정 경로와 사용 가능한 서버 이름을 넣었다.** config dir 이 OS 마다 달라서
+"설정이 없다"만으로는 사용자가 어디를 고쳐야 할지 모른다. macOS 실제 경로는
+`~/Library/Application Support/redmine-cli/config.yml` 이다 (`config server list` 로 확인).
+
+**alias 명령은 서버를 자동 생성하지 않는다.** 예전에는 빈 config.toml 에 `alias set` 하면 파일이
+생겼다. 지금은 서버가 없으면 에러다 — 이름 없는 서버에 alias 를 붙이는 건 의미가 없고, 그 상태로
+저장하면 사용자는 자기가 무슨 서버를 설정했다고 착각하게 된다.
