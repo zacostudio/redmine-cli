@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct FileConfig {
     /// `--server` 가 없을 때 고를 서버 이름.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -14,6 +15,7 @@ pub struct FileConfig {
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     /// 손으로 쓰다 만 항목이 있을 수 있으므로 비어 있어도 파싱은 통과시키고,
     /// 실제로 그 서버를 쓸 때 MissingServer 로 걸러낸다.
@@ -143,6 +145,20 @@ pub fn select_server_name(
     }
 }
 
+/// 이름이 실제로 있는지 확인한다. server use/remove 처럼 해석이 아니라 지목이 필요한 곳에서 쓴다.
+pub fn ensure_server_exists(file: &FileConfig, name: &str, path: &Path) -> Result<(), ConfigError> {
+    if file.servers.is_empty() {
+        return Err(ConfigError::NoServerConfigured(path.to_path_buf()));
+    }
+    match file.servers.contains_key(name) {
+        true => Ok(()),
+        false => Err(ConfigError::ServerNotFound {
+            name: name.to_string(),
+            available: names(file),
+        }),
+    }
+}
+
 pub fn resolve(overrides: &CliOverrides) -> Result<Config, ConfigError> {
     // 자격증명이 flag 로 다 왔으면 설정 파일을 아예 열지 않는다. 파일이 깨져 있든
     // 없든 이 경로는 성공해야 한다.
@@ -252,6 +268,10 @@ pub fn save(path: &std::path::Path, file: &FileConfig) -> Result<(), ConfigError
     }
     let text = serde_norway::to_string(file)
         .map_err(|e| ConfigError::Parse(path.to_path_buf(), e.to_string()))?;
+
+    // 같은 디렉터리에 임시 파일을 만들고 rename 으로 바꿔치기한다. 이 파일 하나에 모든
+    // 서버의 토큰이 들어 있어서, 쓰다 만 파일이 남으면 복구할 곳이 없다.
+    let tmp = tmp_path(path);
     let mut opts = std::fs::OpenOptions::new();
     opts.write(true).create(true).truncate(true);
     #[cfg(unix)]
@@ -260,19 +280,39 @@ pub fn save(path: &std::path::Path, file: &FileConfig) -> Result<(), ConfigError
         opts.mode(0o600);
     }
     let mut f = opts
-        .open(path)
-        .map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
-    f.write_all(text.as_bytes())
-        .map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
-    // OpenOptions::mode 는 새 파일에만 적용된다. 0644 로 저장돼 있던 구버전 파일을
-    // 그대로 갱신한 경우에도 0600 으로 강등시키기 위해 명시 chmod 한 번 더 호출한다.
+        .open(&tmp)
+        .map_err(|e| ConfigError::Io(tmp.clone(), e.to_string()))?;
+    let written = f
+        .write_all(text.as_bytes())
+        .and_then(|_| f.sync_all())
+        .map_err(|e| ConfigError::Io(tmp.clone(), e.to_string()));
+    if let Err(e) = written {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(e);
+    }
+    drop(f);
+    // OpenOptions::mode 는 새 파일에만 적용된다. 남아 있던 임시 파일을 재사용한 경우까지
+    // 0600 을 보장하려고 명시 chmod 를 한 번 더 건다.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
-            .map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
+        if let Err(e) = std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o600)) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(ConfigError::Io(tmp, e.to_string()));
+        }
+    }
+    if let Err(e) = std::fs::rename(&tmp, path) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(ConfigError::Io(path.to_path_buf(), e.to_string()));
     }
     Ok(())
+}
+
+/// 임시 파일은 반드시 같은 디렉터리에 둔다. 다른 파일 시스템이면 rename 이 atomic 하지 않다.
+fn tmp_path(path: &Path) -> PathBuf {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(format!(".tmp{}", std::process::id()));
+    path.with_file_name(name)
 }
 
 /// `--custom-field` 입력(`id=value` 또는 `alias=value`)을 (cf_id, value) 로 분해한다.

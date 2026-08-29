@@ -461,6 +461,252 @@ fn config_server_remove_clears_the_default() {
 }
 
 #[test]
+fn config_server_add_rejects_unusable_input() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("config.yml");
+    let cfg = cfg.to_str().unwrap();
+    let add = |name: &str, url: &str| {
+        let mut c = AssertCommand::cargo_bin("redmine").unwrap();
+        c.args([
+            "--config", cfg, "config", "server", "add", name, "--url", url,
+        ]);
+        c
+    };
+
+    // 여러 줄 토큰은 HTTP 헤더로 만들 수 없다. 저장 시점에 막는다.
+    let out = add("a", "https://a.invalid")
+        .write_stdin("tok\nextra\n")
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("token"), "{stderr}");
+
+    // URL 이 아닌 문자열
+    let out = add("a", "not a url").write_stdin("tok").assert().failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("url"), "{stderr}");
+
+    // http/https 가 아닌 scheme
+    add("a", "ftp://a.invalid")
+        .write_stdin("tok")
+        .assert()
+        .failure();
+
+    // 빈 이름
+    add("", "https://a.invalid")
+        .write_stdin("tok")
+        .assert()
+        .failure();
+
+    assert!(
+        !std::path::Path::new(cfg).exists(),
+        "거부된 입력으로 파일이 만들어지면 안 된다"
+    );
+}
+
+#[test]
+fn config_server_add_force_keeps_the_existing_token() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    let cfg = cfg_path.to_str().unwrap();
+
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg,
+            "config",
+            "server",
+            "add",
+            "a",
+            "--url",
+            "https://a.invalid",
+        ])
+        .write_stdin("tok")
+        .assert()
+        .success();
+
+    // 토큰을 다시 주지 않아도 URL 만 갱신할 수 있어야 한다.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg,
+            "config",
+            "server",
+            "add",
+            "a",
+            "--url",
+            "https://b.invalid",
+            "--force",
+        ])
+        .assert()
+        .success();
+
+    let yml = std::fs::read_to_string(&cfg_path).unwrap();
+    assert!(yml.contains("https://b.invalid"), "{yml}");
+    assert!(
+        yml.contains("api_token: tok"),
+        "기존 토큰이 유지돼야 한다: {yml}"
+    );
+}
+
+#[test]
+fn config_alias_set_rejects_names_that_can_never_resolve() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    write_config(&cfg_path, "https://company.invalid");
+    let cfg = cfg_path.to_str().unwrap();
+    let set = |name: &str| {
+        let mut c = AssertCommand::cargo_bin("redmine").unwrap();
+        c.args(["--config", cfg, "config", "alias", "set", name, "99"]);
+        c
+    };
+
+    // 숫자 이름은 --custom-field 에서 항상 id 로 먼저 해석돼 도달할 수 없다.
+    set("7").assert().failure();
+    // '=' 가 들어가면 id=value 분해가 불가능하다.
+    set("a=b").assert().failure();
+    set("").assert().failure();
+    set("ok").assert().success();
+}
+
+#[test]
+fn config_server_list_reflects_the_actual_resolution() {
+    let tmp = tempfile::tempdir().unwrap();
+
+    // default_server 가 없어도 서버가 하나면 그 서버가 실제로 쓰인다.
+    let single = tmp.path().join("single.yml");
+    std::fs::write(
+        &single,
+        "servers:\n  only:\n    url: https://o.invalid\n    api_token: t\n",
+    )
+    .unwrap();
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            single.to_str().unwrap(),
+            "config",
+            "server",
+            "list",
+        ])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(
+        v["servers"][0]["default"], true,
+        "단일 서버 폴백이 list 에도 보여야 한다"
+    );
+
+    // 가리키는 대상이 없는 default_server 는 경고로 드러난다.
+    let dangling = tmp.path().join("dangling.yml");
+    std::fs::write(
+        &dangling,
+        "default_server: gone\nservers:\n  a:\n    url: https://a.invalid\n    api_token: t\n",
+    )
+    .unwrap();
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            dangling.to_str().unwrap(),
+            "config",
+            "server",
+            "list",
+        ])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(
+        v["warning"].as_str().unwrap_or_default().contains("gone"),
+        "dangling default 를 알려야 한다: {v}"
+    );
+}
+
+#[test]
+fn config_server_use_on_empty_config_points_at_the_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("config.yml");
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "config",
+            "server",
+            "use",
+            "company",
+        ])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("no Redmine server configured"),
+        "빈 설정에서는 'available: ' 가 아니라 파일 경로를 알려야 한다: {stderr}"
+    );
+}
+
+#[test]
+fn config_rejects_misspelled_keys() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg = tmp.path().join("config.yml");
+    // api-token (하이픈) 은 조용히 무시되면 안 된다.
+    std::fs::write(
+        &cfg,
+        "servers:\n  a:\n    url: https://a.invalid\n    api-token: abc\n",
+    )
+    .unwrap();
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg.to_str().unwrap(),
+            "config",
+            "server",
+            "list",
+        ])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("api-token"), "{stderr}");
+}
+
+#[test]
+fn config_server_remove_reports_the_new_default() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    write_config(&cfg_path, "https://company.invalid");
+
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg_path.to_str().unwrap(),
+            "config",
+            "server",
+            "remove",
+            "company",
+        ])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(
+        v["default_server"].is_null(),
+        "기본 서버가 비워진 사실이 출력에 드러나야 한다: {v}"
+    );
+
+    // 저장 도중 임시 파일이 남으면 안 된다.
+    let leftovers: Vec<_> = std::fs::read_dir(tmp.path())
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .filter(|n| n != "config.yml")
+        .collect();
+    assert!(leftovers.is_empty(), "임시 파일 잔여물: {leftovers:?}");
+}
+
+#[test]
 fn empty_config_reports_no_server_configured() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg_path = tmp.path().join("config.yml");

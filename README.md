@@ -70,11 +70,17 @@ redmine config server use personal      # 기본 서버 변경
 서버가 둘 이상인데 기본값이 없으면 이름 목록과 함께 에러가 납니다.
 
 `--server-url` / `--api-token` 은 선택된 서버의 해당 필드를 덮어씁니다. `--server` 없이 두 값을
-모두 주면 설정 파일과 무관한 일회성 호출이 됩니다.
+모두 주면 설정 파일과 무관한 일회성 호출이 됩니다 — 이때는 **custom field alias 도 비어 있습니다.**
+다른 서버의 alias 를 그대로 적용하면 엉뚱한 custom field id 로 값이 나가기 때문입니다. alias 가
+필요하면 `--server <name>` 을 함께 주세요.
 
 ```bash
 redmine --server-url https://other.example.com --api-token zzzz projects
+redmine --server company --server-url https://staging.example.com issues   # alias 는 company 것
 ```
+
+참고: `--api-token` 은 인자로 노출되므로 `ps` 와 셸 히스토리에 남습니다. 상시 사용은 `config.yml`
+에 저장하는 쪽이 안전합니다.
 
 ### 0.3.0 이하에서 올라오는 경우
 
@@ -137,8 +143,12 @@ redmine --server personal config alias set state 3   # 특정 서버에 저장
 redmine config alias remove state
 ```
 
-주의: alias 를 저장하거나 `config server use` 를 실행하면 `config.yml` 을 통째로 다시 씁니다.
-**손으로 넣은 YAML 주석은 지워집니다.**
+주의: alias 를 저장하거나 `config server add/remove/use` 를 실행하면 `config.yml` 을 통째로 다시
+씁니다. **손으로 넣은 YAML 주석은 지워집니다.** 쓰기는 같은 디렉터리의 임시 파일에 기록한 뒤
+rename 하므로, 도중에 중단돼도 기존 파일이 깨지지는 않습니다.
+
+CLI 가 모르는 키가 있으면 저장이 아니라 **읽기 단계에서 에러**가 납니다. `api-token` 처럼 오타 난
+키가 조용히 무시되다가 "토큰이 없다" 로 나타나는 것을 막기 위해서입니다.
 
 See `redmine --help`.
 

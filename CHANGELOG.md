@@ -25,6 +25,14 @@
 - `h2` 0.4.14 -> 0.4.19 (RUSTSEC-2026-0258, unbounded empty DATA frames), `quinn-proto` 0.11.14 -> 0.11.17 (RUSTSEC-2026-0185, remote memory exhaustion) 갱신. 둘 다 `reqwest` 경유의 간접 의존성이다.
 
 ### Fixed
+- `config.yml` 저장을 임시 파일 + rename 방식으로 변경. 모든 서버의 토큰이 이 파일 하나에만 있으므로, 쓰는 도중 중단돼도 기존 파일이 남아야 한다.
+- `config server list` 의 `default` 표시가 실제 해석 결과를 따르도록 수정. 서버가 하나뿐이고 `default_server` 가 없을 때 `false` 로 보이던 문제, `default_server` 가 없는 서버를 가리켜도 아무 말 없던 문제를 함께 고쳤다(후자는 `warning` 필드로 알린다).
+- `config server add` 입력 검증 추가 — 여러 줄/공백이 섞인 토큰, http(s) 가 아닌 URL, 빈 서버 이름을 저장 시점에 거부한다. 예전에는 저장된 뒤 `invalid API key` 나 `builder error` 로 뒤늦게 드러났다.
+- `config server add --force` 가 토큰을 다시 요구하지 않는다. URL 만 갱신할 수 있다.
+- `config alias set` 이 숫자 이름과 `=` 가 들어간 이름을 거부한다. `--custom-field` 해석 규칙상 영영 도달할 수 없는 alias 였고, 숫자 이름은 조용히 다른 custom field id 로 나갔다.
+- `config.yml` 에 모르는 키가 있으면 읽기 단계에서 에러를 낸다. `api-token` 같은 오타가 무시되다가 "토큰 없음" 으로 나타나던 문제.
+- `config server use/remove` 가 빈 설정에서 `available: ` 만 출력하던 문제. 이제 만들어야 할 파일 경로를 알려준다.
+- `config server remove` 출력에 삭제 후 `default_server` 상태를 포함한다.
 - CI 워크플로의 push 트리거가 `main` 을 보고 있어 기본 브랜치 `master` 푸시에 CI 가 돌지 않던 문제. (af41a0a)
 
 ## [0.3.0] - 2026-05-16

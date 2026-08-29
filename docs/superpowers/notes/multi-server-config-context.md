@@ -69,3 +69,26 @@ clap 이 중복으로 죽는다. 덕분에 `redmine --api-token xxx config serve
 
 **`--force` 덮어쓰기는 alias 를 살린다.** URL·토큰만 갱신하려는 경우가 대부분인데 alias 까지
 날아가면 서버별로 모아둔 cf id 를 다시 넣어야 한다.
+
+## 2026-08-29 코드 리뷰 반영
+
+리뷰가 15건을 보고했고 전부 손으로 재현한 뒤 12건을 고쳤다. 판단이 갈린 3건을 남겨 둔다.
+
+**고치지 않은 것 1 — ad-hoc 경로에서 alias 가 비는 것.** `--server` 없이 자격증명 두 개를 주면
+`cf_aliases` 가 빈 채로 간다. 리뷰는 regression 이라고 봤지만, 다른 서버의 alias 를 그대로
+적용하면 **엉뚱한 custom field id 로 값이 나간다.** 잘못된 값을 쓰는 것보다 `unknown custom
+field alias` 로 멈추는 편이 안전하다. README 에 명시하고 `--server` 를 함께 주는 방법을 적었다.
+
+**고치지 않은 것 2 — `--api-token` 이 argv 에 노출되는 것.** flag 자체는 이전부터 있었고, env 를
+없애면서 눈에 띄게 됐을 뿐이다. 모든 명령에 stdin 토큰 입력을 다는 건 범위가 다르다. README 에
+주의만 적었다.
+
+**고치지 않은 것 3 — config.toml 안내.** "config.yml 만 사용" 이 사용자 지시였다. 존재 여부를
+확인하는 한 줄이라도 다시 config.toml 을 아는 코드가 되므로 넣지 않았다.
+
+**deny_unknown_fields 를 켠 이유.** 오타 난 키(`api-token`, `custom_field`)가 조용히 무시되면
+증상이 원인에서 멀어진다("토큰 없음", "alias 없음"). 게다가 전체 rewrite 방식이라 다음 저장에서
+그 키가 사라진다. 파싱 단계에서 키 이름과 줄 번호를 찍어 주는 편이 낫다.
+
+**save 를 임시 파일 + rename 으로 바꾼 이유.** env 폴백을 없앤 뒤로 이 파일 하나가 모든 서버
+토큰의 유일한 사본이다. 예전에는 쓰다 말아도 env 로 계속 쓸 수 있었지만 지금은 복구할 곳이 없다.
