@@ -22,9 +22,9 @@ flag > `REDMINE_URL`/`REDMINE_API_TOKEN` env > `config.toml` 순으로 머지한
 - `--server <name>` global flag
 - custom field alias 를 서버별로 분리
 - `config server list` / `config server use` 추가, `config alias *` 를 서버 인식하도록 변경
-- `config.toml` → `config.yml` 1회 자동 변환
 
-범위 밖: 서버 CRUD 명령(`server add/remove`), YAML 주석 보존, 토큰의 keychain 보관.
+범위 밖: 서버 CRUD 명령(`server add/remove`), YAML 주석 보존, 토큰의 keychain 보관,
+`config.toml` 자동 변환.
 
 ## 1. 파일 포맷
 
@@ -70,8 +70,7 @@ YAML 크레이트는 `serde_norway` 를 쓴다. `serde_yaml` 0.9.34 는 아카�
 `.github/workflows/audit.yml` 의 `rustsec/audit-check` 에 걸릴 위험이 있다. 추가 후 `cargo audit`
 로 실제 확인한다.
 
-`toml` 의존성은 자동 변환에서 legacy 파일을 **읽기 위해** 남긴다. 쓰기 경로는 사라지므로
-feature 를 `parse` + `serde` 로 줄인다.
+`toml` 의존성은 제거한다.
 
 ## 2. 서버 선택 규칙
 
@@ -120,21 +119,14 @@ redmine --server company config alias remove state
 트레이드오프: 쓰기 명령은 파일을 통째로 다시 쓴다. 손으로 넣은 YAML **주석은 지워진다.** 주석 보존은
 별도 파서가 필요해 이번 범위에서 제외한다. README 에 명시한다.
 
-## 6. config.toml 자동 변환
+## 6. config.toml 은 지원하지 않는다
 
-조건: 해석된 `config.yml` 경로가 없고, `path.with_extension("toml")` 이 있을 때 1회.
+설정 파일은 `config.yml` 하나다. 예전 `config.toml` 은 읽지 않고, 자동 변환도 하지 않는다.
+`toml` 의존성 자체를 제거한다.
 
-- `server_url` / `api_token` → `servers.default` 의 `url` / `api_token`
-- `custom_fields` → 그 서버의 `custom_fields`
-- `default_server: default`
-- 결과를 0600 으로 저장하고, `config.toml` 은 지우지 않는다.
-- 변환 사실을 stderr 한 줄로 알린다(stdout 은 JSON 전용이라 오염시키지 않는다).
-
-`server_url`/`api_token` 이 비어 있는 legacy 파일(alias 만 있는 경우)도 그대로 변환한다. 빈 값은
-실제로 그 서버를 쓸 때만 `MissingServer`/`MissingToken` 이 되므로 변환 자체는 손실이 없다.
-
-`with_extension("toml")` 을 쓰면 `--config /tmp/x.yml` 같은 명시 경로에서도 같은 규칙이 적용돼
-테스트가 쉬워진다.
+> 최초 설계에서는 `config.toml` 을 1회 자동 변환하기로 했으나, 2026-08-29 사용자 요청으로
+> "config.yml 만 사용" 으로 바꿨다. 설정 경로가 하나뿐이어야 동작을 설명하기 쉽고, 변환 코드는
+> 한 번 쓰이고 영영 남는 종류의 코드다.
 
 ## 7. 에러
 
@@ -160,7 +152,6 @@ enum ConfigError {
 - 없는 서버 이름 에러에 사용 가능한 이름이 담기는지
 - flag override 가 선택된 서버의 필드만 덮어쓰는지
 - `--server-url` + `--api-token` 동시 지정 시 서버 선택을 건너뛰는지
-- TOML → YAML 변환 결과(빈 url/token 포함)
 - 서버별 alias 분리
 
 통합(`tests/integration.rs`):

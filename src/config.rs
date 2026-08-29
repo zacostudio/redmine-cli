@@ -3,9 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-/// config.toml 을 변환할 때 만들어지는 서버 이름.
-pub const LEGACY_SERVER_NAME: &str = "default";
-
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct FileConfig {
     /// `--server` 가 없을 때 고를 서버 이름.
@@ -18,7 +15,7 @@ pub struct FileConfig {
 
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct ServerConfig {
-    /// 비어 있을 수 있다. config.toml 변환이 손실 없이 끝나도록 허용하고,
+    /// 손으로 쓰다 만 항목이 있을 수 있으므로 비어 있어도 파싱은 통과시키고,
     /// 실제로 그 서버를 쓸 때 MissingServer 로 걸러낸다.
     #[serde(default)]
     pub url: String,
@@ -147,8 +144,8 @@ pub fn select_server_name(
 }
 
 pub fn resolve(overrides: &CliOverrides) -> Result<Config, ConfigError> {
-    // 자격증명이 flag 로 다 왔으면 설정 파일을 아예 열지 않는다. 파일을 읽는 것만으로
-    // legacy 변환이 일어나므로, 파일과 무관한 호출이 사용자 설정을 건드리면 안 된다.
+    // 자격증명이 flag 로 다 왔으면 설정 파일을 아예 열지 않는다. 파일이 깨져 있든
+    // 없든 이 경로는 성공해야 한다.
     if let Some(cfg) = ad_hoc(overrides) {
         return Ok(cfg);
     }
@@ -222,53 +219,12 @@ fn load_file(explicit: Option<PathBuf>) -> Result<FileConfig, ConfigError> {
 
 fn load_at(path: &Path) -> Result<FileConfig, ConfigError> {
     if !path.exists() {
-        // config.yml 이 없고 예전 config.toml 만 있으면 1회 변환한다.
-        let legacy = path.with_extension("toml");
-        if legacy.exists() {
-            let text = std::fs::read_to_string(&legacy)
-                .map_err(|e| ConfigError::Io(legacy.clone(), e.to_string()))?;
-            let file = parse_legacy(&text, &legacy)?;
-            save(path, &file)?;
-            // stdout 은 JSON 전용이므로 안내는 stderr 로만 낸다.
-            eprintln!(
-                "migrated {} -> {} (the old file is left in place)",
-                legacy.display(),
-                path.display()
-            );
-            return Ok(file);
-        }
         return Ok(FileConfig::default());
     }
     let text = std::fs::read_to_string(path)
         .map_err(|e| ConfigError::Io(path.to_path_buf(), e.to_string()))?;
     serde_norway::from_str::<FileConfig>(&text)
         .map_err(|e| ConfigError::Parse(path.to_path_buf(), e.to_string()))
-}
-
-/// 예전 단일 서버 config.toml 을 servers.default 하나짜리 FileConfig 로 옮긴다.
-fn parse_legacy(text: &str, path: &Path) -> Result<FileConfig, ConfigError> {
-    #[derive(Default, Deserialize)]
-    struct LegacyConfig {
-        server_url: Option<String>,
-        api_token: Option<String>,
-        #[serde(default)]
-        custom_fields: BTreeMap<String, u64>,
-    }
-    let legacy: LegacyConfig =
-        toml::from_str(text).map_err(|e| ConfigError::Parse(path.to_path_buf(), e.to_string()))?;
-    let mut servers = BTreeMap::new();
-    servers.insert(
-        LEGACY_SERVER_NAME.to_string(),
-        ServerConfig {
-            url: legacy.server_url.unwrap_or_default(),
-            api_token: legacy.api_token.unwrap_or_default(),
-            custom_fields: legacy.custom_fields,
-        },
-    );
-    Ok(FileConfig {
-        default_server: Some(LEGACY_SERVER_NAME.to_string()),
-        servers,
-    })
 }
 
 /// 외부에서 사용 가능한 형태로 config.yml 경로를 해석한다.
@@ -488,32 +444,6 @@ mod tests {
         assert_eq!(back.default_server.as_deref(), Some("company"));
         assert_eq!(back.servers["personal"].api_token, "ptok");
         assert_eq!(back.servers["company"].custom_fields["state"], 7);
-    }
-
-    #[test]
-    fn legacy_toml_becomes_a_default_server() {
-        let text = r#"
-server_url = "https://old.example.com"
-api_token = "otok"
-
-[custom_fields]
-state = 7
-"#;
-        let file = parse_legacy(text, &dummy_path()).unwrap();
-        assert_eq!(file.default_server.as_deref(), Some(LEGACY_SERVER_NAME));
-        let s = &file.servers[LEGACY_SERVER_NAME];
-        assert_eq!(s.url, "https://old.example.com");
-        assert_eq!(s.api_token, "otok");
-        assert_eq!(s.custom_fields["state"], 7);
-    }
-
-    #[test]
-    fn legacy_toml_without_credentials_still_keeps_aliases() {
-        let text = "[custom_fields]\nstate = 7\n";
-        let file = parse_legacy(text, &dummy_path()).unwrap();
-        let s = &file.servers[LEGACY_SERVER_NAME];
-        assert!(s.url.is_empty() && s.api_token.is_empty());
-        assert_eq!(s.custom_fields["state"], 7);
     }
 
     #[test]

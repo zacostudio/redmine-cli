@@ -11,7 +11,7 @@
 - [x] 서버 선택 규칙 4갈래 + 에러 타입
 - [x] flag override / ad-hoc 경로
 - [x] YAML 로드·저장 (0600 유지)
-- [x] config.toml → config.yml 1회 자동 변환
+- [x] ~~config.toml → config.yml 1회 자동 변환~~ → 2026-08-29 요청으로 config.yml 만 사용, 변환/`toml` 의존성 제거
 - [x] `parse_custom_field` 인자 BTreeMap 으로 변경
 - [x] 단위 테스트 (선택 규칙, override, 변환, alias 분리)
 

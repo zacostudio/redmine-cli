@@ -260,49 +260,8 @@ async fn server_flag_picks_the_configured_server() {
     );
 }
 
-#[test]
-fn legacy_config_toml_is_migrated_once() {
-    let tmp = tempfile::tempdir().unwrap();
-    let toml_path = tmp.path().join("config.toml");
-    let yml_path = tmp.path().join("config.yml");
-    std::fs::write(
-        &toml_path,
-        "server_url = \"https://old.invalid\"\napi_token = \"otok\"\n\n[custom_fields]\nstate = 7\n",
-    )
-    .unwrap();
-
-    let out = AssertCommand::cargo_bin("redmine")
-        .unwrap()
-        .args([
-            "--config",
-            yml_path.to_str().unwrap(),
-            "config",
-            "server",
-            "list",
-        ])
-        .assert()
-        .success();
-    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(v["default_server"], "default");
-    let servers = v["servers"].as_array().unwrap();
-    assert_eq!(servers[0]["url"], "https://old.invalid");
-    assert_eq!(servers[0]["custom_fields"]["state"], 7);
-
-    // 변환된 파일이 생기고, 원본 config.toml 은 남아 있어야 한다.
-    assert!(yml_path.exists());
-    assert!(toml_path.exists());
-    let yml = std::fs::read_to_string(&yml_path).unwrap();
-    assert!(yml.contains("otok"), "토큰이 옮겨져야 한다: {yml}");
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let meta = std::fs::metadata(&yml_path).unwrap();
-        assert_eq!(meta.permissions().mode() & 0o777, 0o600);
-    }
-}
-
 #[tokio::test(flavor = "current_thread")]
-async fn credential_flags_do_not_touch_the_config_file() {
+async fn credential_flags_do_not_read_the_config_file() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/issues.json"))
@@ -312,25 +271,19 @@ async fn credential_flags_do_not_touch_the_config_file() {
         .mount(&server)
         .await;
 
-    // 예전 config.toml 만 있는 상태. flag 로만 호출하면 변환도 일어나면 안 된다.
+    // 파싱조차 안 되는 config.yml 이 있어도 flag 만으로 한 호출은 성공해야 한다.
     let tmp = tempfile::tempdir().unwrap();
-    let toml_path = tmp.path().join("config.toml");
-    let yml_path = tmp.path().join("config.yml");
-    std::fs::write(&toml_path, "server_url = \"https://old.invalid\"\n").unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    std::fs::write(&cfg_path, "servers: [ this is not valid\n").unwrap();
 
     AssertCommand::cargo_bin("redmine")
         .unwrap()
-        .args(["--config", yml_path.to_str().unwrap()])
+        .args(["--config", cfg_path.to_str().unwrap()])
         .arg("--server-url")
         .arg(server.uri())
         .args(["--api-token", "secret", "issues"])
         .assert()
         .success();
-
-    assert!(
-        !yml_path.exists(),
-        "자격증명이 flag 로 다 왔으면 설정 파일을 건드리지 않아야 한다"
-    );
 }
 
 #[test]

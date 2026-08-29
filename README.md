@@ -60,11 +60,11 @@ redmine config server use personal      # 기본 서버 변경
 redmine --server-url https://other.example.com --api-token zzzz projects
 ```
 
-### config.toml 에서 옮겨오기
+### 0.3.0 이하에서 올라오는 경우
 
-0.3.0 까지 쓰던 `config.toml` 은 첫 실행에서 `config.yml` 로 자동 변환됩니다. 기존 설정은
-`default` 라는 이름의 서버가 되고, 원본 `config.toml` 은 지우지 않고 그대로 남깁니다.
-`REDMINE_URL` / `REDMINE_API_TOKEN` 환경 변수는 더 이상 읽지 않습니다.
+설정 파일은 `config.yml` 하나만 읽습니다. 예전 `config.toml` 과 `REDMINE_URL` /
+`REDMINE_API_TOKEN` 환경 변수는 더 이상 사용하지 않으므로, 위 형식으로 `config.yml` 을 새로
+만들어 주세요.
 
 ## Usage
 
