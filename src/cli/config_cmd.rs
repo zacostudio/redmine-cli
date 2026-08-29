@@ -13,6 +13,11 @@ pub enum ConfigCommand {
     #[command(subcommand)]
     Server(ServerCommand),
     /// Manage custom field aliases of the selected server.
+    ///
+    /// A Redmine custom field is addressed by a numeric id, and the same
+    /// field usually has a different id on each server. An alias is a name
+    /// for one id on one server, stored under that server in config.yml, and
+    /// used as `--custom-field <alias>=<value>`. Aliases never cross servers.
     #[command(subcommand)]
     Alias(AliasCommand),
 }

@@ -1,5 +1,5 @@
 // clap derive 가 의도대로 인자를 해석하는지 확인.
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use redmine_cli::cli::{Cli, Command};
 
 fn parse(args: &[&str]) -> Cli {
@@ -518,5 +518,45 @@ fn parses_membership_add_with_id_only() {
             assert!(a.id_only);
         }
         _ => panic!("expected Membership::Add"),
+    }
+}
+
+/// `--help` 의 Configuration 절은 이 CLI 를 호출하는 AI 가 설정 구조를 파악하는 통로다.
+/// 지워지거나 실제 동작과 어긋나면 호출자가 잘못된 설정을 만들어 낸다.
+#[test]
+fn long_help_documents_the_config_file_and_aliases() {
+    let help = Cli::command().render_long_help().to_string();
+    for needle in [
+        "Configuration:",
+        "default_server",
+        "custom_fields",
+        "config server add",
+        "config alias",
+        "--api-token-file",
+    ] {
+        assert!(help.contains(needle), "--help 에 '{needle}' 이 없다");
+    }
+}
+
+/// custom field 해석 규칙은 값이 잘못 기록되는 것과 직결돼서 각 명령 도움말에 있어야 한다.
+#[test]
+fn custom_field_flags_explain_alias_resolution() {
+    for path in [
+        vec!["issues"],
+        vec!["issue", "create"],
+        vec!["issue", "update"],
+    ] {
+        let mut cmd = Cli::command();
+        for name in &path {
+            cmd = cmd
+                .find_subcommand(name)
+                .unwrap_or_else(|| panic!("subcommand {name} 없음"))
+                .clone();
+        }
+        let help = cmd.render_long_help().to_string();
+        assert!(
+            help.contains("alias"),
+            "{path:?} 도움말에 alias 설명이 없다"
+        );
     }
 }

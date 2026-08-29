@@ -29,7 +29,18 @@ pub struct IssuesArgs {
     pub offset: Option<u64>,
     #[arg(long)]
     pub sort: Option<String>,
-    /// Repeatable: --custom-field 7=Dev (or alias from config).
+    /// Filter by custom field, `<id>=<value>` or `<alias>=<value>`. Repeatable.
+    ///
+    /// Aliases come from the selected server in config.yml
+    /// (`redmine config alias list` shows them). Numeric names are read as
+    /// ids, never as aliases.
+    /// Custom field as `<id>=<value>` or `<alias>=<value>`. Repeatable.
+    ///
+    /// Aliases are per server: `redmine config alias set state 7` stores
+    /// state -> 7 for the selected server, so `--custom-field state=Dev`
+    /// sends custom field 7 there and whatever id `state` has on another
+    /// server. Numeric names are always read as ids, never as aliases.
+    /// An unknown alias is an error — nothing is sent.
     #[arg(long = "custom-field", value_name = "ID_OR_ALIAS=VALUE")]
     pub custom_field: Vec<String>,
 }
@@ -194,6 +205,13 @@ pub struct IssueCreateArgs {
     pub done_ratio: Option<u32>,
     #[arg(long = "target-version")]
     pub target_version: Option<u64>,
+    /// Custom field as `<id>=<value>` or `<alias>=<value>`. Repeatable.
+    ///
+    /// Aliases are per server: `redmine config alias set state 7` stores
+    /// state -> 7 for the selected server, so `--custom-field state=Dev`
+    /// sends custom field 7 there and whatever id `state` has on another
+    /// server. Numeric names are always read as ids, never as aliases.
+    /// An unknown alias is an error — nothing is sent.
     #[arg(long = "custom-field", value_name = "ID_OR_ALIAS=VALUE")]
     pub custom_field: Vec<String>,
     /// Print only the new issue ID followed by a newline, instead of the
@@ -237,6 +255,13 @@ pub struct IssueUpdateArgs {
     pub notes: Option<String>,
     #[arg(long = "private-notes", default_value_t = false)]
     pub private_notes: bool,
+    /// Custom field as `<id>=<value>` or `<alias>=<value>`. Repeatable.
+    ///
+    /// Aliases are per server: `redmine config alias set state 7` stores
+    /// state -> 7 for the selected server, so `--custom-field state=Dev`
+    /// sends custom field 7 there and whatever id `state` has on another
+    /// server. Numeric names are always read as ids, never as aliases.
+    /// An unknown alias is an error — nothing is sent.
     #[arg(long = "custom-field", value_name = "ID_OR_ALIAS=VALUE")]
     pub custom_field: Vec<String>,
 }

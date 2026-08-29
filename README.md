@@ -138,10 +138,31 @@ token=$(redmine attachment upload --issue 1234 --file ./screenshot.png --token-o
 These flags print **only** the integer ID (or token string) followed by a
 newline — no JSON, no wrapper, nothing else to parse.
 
-### Manage aliases
+### Custom fields (aliases)
 
-custom field alias 는 서버마다 따로 관리됩니다. 회사 서버의 `state` 가 7 이고 개인 서버에서는
-3 이어도 서로 섞이지 않습니다.
+레드마인의 custom field 는 숫자 ID 로만 지정됩니다. 같은 "상태" 필드라도 서버마다 번호가 다르기
+때문에, 번호에 이름을 붙여 **서버별로** 저장합니다.
+
+```yaml
+servers:
+  company:
+    custom_fields:
+      state: 7      # 회사 서버에서는 7번
+  personal:
+    custom_fields:
+      state: 3      # 개인 서버에서는 3번
+```
+
+```bash
+redmine issue 123 update --custom-field state=개발중                    # company → 7번
+redmine --server personal issue 45 update --custom-field state=개발중   # personal → 3번
+redmine issue 123 update --custom-field 7=개발중                        # 숫자로 직접 지정
+```
+
+- 이름이 숫자면 언제나 ID 로 읽습니다. 숫자를 alias 이름으로 저장할 수 없습니다.
+- 모르는 이름은 에러입니다. 다른 서버의 번호로 대신 나가는 일은 없습니다.
+- `--server` 없이 `--server-url` 과 `--api-token` 을 함께 준 일회성 호출에서는 alias 가 비어
+  있습니다. 모르는 서버에 다른 서버의 번호를 쓰면 엉뚱한 필드에 값이 기록되기 때문입니다.
 
 ```bash
 redmine config alias list                            # 선택된 서버의 alias
@@ -156,6 +177,13 @@ rename 하므로, 도중에 중단돼도 기존 파일이 깨지지는 않습니
 
 CLI 가 모르는 키가 있으면 저장이 아니라 **읽기 단계에서 에러**가 납니다. `api-token` 처럼 오타 난
 키가 조용히 무시되다가 "토큰이 없다" 로 나타나는 것을 막기 위해서입니다.
+
+### AI 에이전트에서 쓸 때
+
+`redmine --help` 끝에 Configuration 절이 붙어 있습니다. 설정 파일 구조, 서버 선택 순서, custom
+field alias 해석 규칙, 관리 명령이 한 화면에 정리돼 있어서, 이 CLI 를 호출하는 에이전트가 설정을
+따로 물어보지 않고 파악할 수 있습니다. `redmine issue update --help` 에는 alias 해석 규칙이
+다시 적혀 있습니다.
 
 See `redmine --help`.
 

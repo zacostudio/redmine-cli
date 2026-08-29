@@ -12,6 +12,8 @@
 - `config server use <name>` — `--server` 없이 쓸 기본 서버 지정. (57e7186)
 - `config server add <name> --url <url>` — 서버 추가. 토큰은 `--api-token` 또는 stdin 으로 받는다(셸 히스토리에 남기지 않으려는 용도). 첫 서버는 자동으로 기본 서버가 되고, 같은 이름은 `--force` 없이는 덮어쓰지 않는다.
 - `config server remove <name>` — 서버 삭제. 기본 서버였다면 `default_server` 도 함께 비운다.
+- `--help` 끝에 Configuration 절 추가. 설정 파일 구조, 서버 선택 순서, custom field alias 해석 규칙, 관리 명령을 한 화면에 담는다. 이 CLI 를 호출하는 AI 에이전트가 설정을 따로 묻지 않고 파악하기 위한 것이며, 사라지지 않도록 테스트로 고정했다.
+- `issue create` / `issue update` 의 `--custom-field` 도움말이 비어 있던 것을 채우고, alias 가 서버별이라는 점과 숫자 이름이 항상 ID 로 읽힌다는 점을 명시.
 - `--api-token-file <path>` — 토큰을 파일에서 읽는다. `--api-token` 이 `ps` 와 셸 히스토리에 남는 문제를 피하기 위한 경로이며, `--api-token` 과 동시에 쓸 수 없다. `config server add` 도 이 값을 쓴다.
 
 ### Changed

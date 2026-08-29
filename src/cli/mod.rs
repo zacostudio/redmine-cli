@@ -26,8 +26,51 @@ use crate::client::RedmineClient;
 use crate::config::{self, CliOverrides, Config};
 use crate::output;
 
+/// `--help` 아래에 붙는 설정 요약. 사람도 보지만 이 CLI 를 호출하는 AI 가
+/// 설정 구조를 물어보지 않고 파악할 수 있게 하는 것이 주 목적이다.
+const CONFIG_HELP: &str = "\
+Configuration:
+  All settings live in one YAML file (`redmine config server list` prints its
+  path). Environment variables are not read.
+
+    default_server: company
+    servers:
+      company:
+        url: https://redmine.example.com
+        api_token: xxxx
+        custom_fields:      # alias -> custom field id, per server
+          state: 7
+      personal:
+        url: https://redmine.home.net
+        api_token: yyyy
+        custom_fields:
+          state: 3          # same name, different id on this server
+
+  Server selection: --server <name>, else default_server, else the only
+  server if there is exactly one, else an error listing the names.
+
+  Custom fields: `--custom-field state=Dev` resolves `state` through the
+  selected server's custom_fields (7 on company, 3 on personal). A numeric
+  name is always an id, never an alias. An unknown alias is an error.
+
+  Managing it:
+    redmine config server add <name> --url <url> --api-token <token>
+    redmine config server list | use <name> | remove <name>
+    redmine config alias list | set <name> <id> | remove <name>
+
+  Credentials for one-off calls: --server-url and --api-token (or
+  --api-token-file, which keeps the token out of ps and shell history).
+  Passing both without --server skips the config file entirely, so custom
+  field aliases are empty in that mode.
+";
+
 #[derive(Parser)]
-#[command(name = "redmine", version, about = "Standalone CLI for Redmine")]
+#[command(
+    name = "redmine",
+    version,
+    about = "Standalone CLI for Redmine",
+    after_long_help = CONFIG_HELP
+)]
 pub struct Cli {
     /// Redmine server to use, by name from config.yml (defaults to default_server).
     #[arg(long, global = true)]
