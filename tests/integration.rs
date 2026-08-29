@@ -301,6 +301,38 @@ fn legacy_config_toml_is_migrated_once() {
     }
 }
 
+#[tokio::test(flavor = "current_thread")]
+async fn credential_flags_do_not_touch_the_config_file() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/issues.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "issues": [], "total_count": 0
+        })))
+        .mount(&server)
+        .await;
+
+    // 예전 config.toml 만 있는 상태. flag 로만 호출하면 변환도 일어나면 안 된다.
+    let tmp = tempfile::tempdir().unwrap();
+    let toml_path = tmp.path().join("config.toml");
+    let yml_path = tmp.path().join("config.yml");
+    std::fs::write(&toml_path, "server_url = \"https://old.invalid\"\n").unwrap();
+
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", yml_path.to_str().unwrap()])
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret", "issues"])
+        .assert()
+        .success();
+
+    assert!(
+        !yml_path.exists(),
+        "자격증명이 flag 로 다 왔으면 설정 파일을 건드리지 않아야 한다"
+    );
+}
+
 #[test]
 fn empty_config_reports_no_server_configured() {
     let tmp = tempfile::tempdir().unwrap();

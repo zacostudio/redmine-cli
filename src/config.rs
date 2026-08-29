@@ -147,6 +147,11 @@ pub fn select_server_name(
 }
 
 pub fn resolve(overrides: &CliOverrides) -> Result<Config, ConfigError> {
+    // 자격증명이 flag 로 다 왔으면 설정 파일을 아예 열지 않는다. 파일을 읽는 것만으로
+    // legacy 변환이 일어나므로, 파일과 무관한 호출이 사용자 설정을 건드리면 안 된다.
+    if let Some(cfg) = ad_hoc(overrides) {
+        return Ok(cfg);
+    }
     let path = resolve_path(overrides.config_path.clone());
     let file = match &path {
         Some(p) => load_at(p)?,
@@ -157,26 +162,32 @@ pub fn resolve(overrides: &CliOverrides) -> Result<Config, ConfigError> {
     resolve_from(&file, overrides, &shown)
 }
 
+/// `--server` 없이 URL 과 토큰이 모두 flag 로 오면 설정 파일과 무관한 ad-hoc 서버다.
+/// 이 경로가 있어야 CLI 한 줄 호출과 통합 테스트가 사용자 설정에 좌우되지 않는다.
+fn ad_hoc(overrides: &CliOverrides) -> Option<Config> {
+    if overrides.server.is_some() {
+        return None;
+    }
+    let server_url = overrides.server_url.clone().filter(|s| !s.is_empty())?;
+    let api_token = overrides.api_token.clone().filter(|s| !s.is_empty())?;
+    Some(Config {
+        server_url,
+        api_token,
+        cf_aliases: BTreeMap::new(),
+    })
+}
+
 /// 파일 I/O 와 분리된 순수 해석부. 테스트가 여기를 직접 부른다.
 pub fn resolve_from(
     file: &FileConfig,
     overrides: &CliOverrides,
     path: &Path,
 ) -> Result<Config, ConfigError> {
+    if let Some(cfg) = ad_hoc(overrides) {
+        return Ok(cfg);
+    }
     let flag_url = overrides.server_url.clone().filter(|s| !s.is_empty());
     let flag_token = overrides.api_token.clone().filter(|s| !s.is_empty());
-
-    // --server 없이 자격증명 두 개가 다 오면 설정 파일과 무관한 ad-hoc 서버다.
-    // 이 경로가 있어야 CLI 한 줄 호출과 통합 테스트가 사용자 설정에 좌우되지 않는다.
-    if overrides.server.is_none() {
-        if let (Some(server_url), Some(api_token)) = (flag_url.clone(), flag_token.clone()) {
-            return Ok(Config {
-                server_url,
-                api_token,
-                cf_aliases: BTreeMap::new(),
-            });
-        }
-    }
 
     let name = select_server_name(file, overrides.server.as_deref(), path)?;
     let server = &file.servers[&name];
