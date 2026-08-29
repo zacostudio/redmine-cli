@@ -28,6 +28,7 @@
 - `h2` 0.4.14 -> 0.4.19 (RUSTSEC-2026-0258, unbounded empty DATA frames), `quinn-proto` 0.11.14 -> 0.11.17 (RUSTSEC-2026-0185, remote memory exhaustion) 갱신. 둘 다 `reqwest` 경유의 간접 의존성이다.
 
 ### Fixed
+- `config server add` 가 `default_server` 가 없다는 이유만으로 새 서버를 기본으로 승격시키던 문제. 손으로 서버 둘을 적어 둔 설정에 하나 더 추가하면 이후 호출이 조용히 새 서버로 갔다. 이제 서버가 그것 하나뿐일 때만 기본이 되며, add 출력에 현재 `default_server` 를 함께 싣는다.
 - `config.yml` 저장을 임시 파일 + rename 방식으로 변경. 모든 서버의 토큰이 이 파일 하나에만 있으므로, 쓰는 도중 중단돼도 기존 파일이 남아야 한다.
 - `config server list` 의 `default` 표시가 실제 해석 결과를 따르도록 수정. 서버가 하나뿐이고 `default_server` 가 없을 때 `false` 로 보이던 문제, `default_server` 가 없는 서버를 가리켜도 아무 말 없던 문제를 함께 고쳤다(후자는 `warning` 필드로 알린다).
 - `config server add` 입력 검증 추가 — 여러 줄/공백이 섞인 토큰, http(s) 가 아닌 URL, 빈 서버 이름을 저장 시점에 거부한다. 예전에는 저장된 뒤 `invalid API key` 나 `builder error` 로 뒤늦게 드러났다.

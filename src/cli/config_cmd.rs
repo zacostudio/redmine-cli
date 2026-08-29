@@ -217,11 +217,21 @@ fn server_add(path: &Path, name: String, url: String, force: bool, api_token: Op
             custom_fields,
         },
     );
-    // 첫 서버는 기본 서버가 된다. 서버가 하나뿐이면 --server 를 매번 쓰게 할 이유가 없다.
-    if file.default_server.is_none() {
-        file.default_server = Some(name);
+    // 서버가 이것 하나뿐일 때만 기본으로 삼는다. default_server 가 없다는 이유로 승격시키면,
+    // 손으로 서버 둘을 적어 둔 설정에 하나 더 추가했을 때 이후 호출이 조용히 새 서버로 간다.
+    if file.default_server.is_none() && file.servers.len() == 1 {
+        file.default_server = Some(name.clone());
     }
-    store(path, &file);
+    if let Err(e) = config::save(path, &file) {
+        output::print_error(&e.to_string());
+    }
+    // 어느 서버가 기본인지 매번 드러내야 --server 를 빠뜨렸을 때 놀라지 않는다.
+    output::print_json(json!({
+        "ok": true,
+        "path": path.display().to_string(),
+        "added": name,
+        "default_server": file.default_server,
+    }));
 }
 
 /// 잘못된 URL 은 저장된 뒤 "builder error" 라는 알아볼 수 없는 에러로만 드러난다.

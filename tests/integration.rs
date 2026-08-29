@@ -461,6 +461,64 @@ fn config_server_remove_clears_the_default() {
 }
 
 #[test]
+fn config_server_add_does_not_hijack_an_existing_default() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    // 손으로 쓴 설정. 서버가 둘인데 default_server 가 없다.
+    std::fs::write(
+        &cfg_path,
+        "servers:\n  alpha:\n    url: https://a.invalid\n    api_token: t\n\
+         \x20 beta:\n    url: https://b.invalid\n    api_token: t\n",
+    )
+    .unwrap();
+    let cfg = cfg_path.to_str().unwrap();
+
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            cfg,
+            "--api-token",
+            "gtok",
+            "config",
+            "server",
+            "add",
+            "gamma",
+            "--url",
+            "https://g.invalid",
+        ])
+        .assert()
+        .success();
+
+    let yml = std::fs::read_to_string(&cfg_path).unwrap();
+    assert!(
+        !yml.contains("default_server"),
+        "추가만으로 기본 서버가 정해지면 이후 호출이 조용히 새 서버로 간다: {yml}"
+    );
+
+    // 서버가 하나뿐일 때는 그 서버가 기본이 되는 편이 낫다.
+    let solo = tmp.path().join("solo.yml");
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            solo.to_str().unwrap(),
+            "--api-token",
+            "t",
+            "config",
+            "server",
+            "add",
+            "only",
+            "--url",
+            "https://o.invalid",
+        ])
+        .assert()
+        .success();
+    let yml = std::fs::read_to_string(&solo).unwrap();
+    assert!(yml.contains("default_server: only"), "{yml}");
+}
+
+#[test]
 fn config_server_add_rejects_unusable_input() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg = tmp.path().join("config.yml");
@@ -526,6 +584,12 @@ fn config_server_add_force_keeps_the_existing_token() {
         .assert()
         .success();
 
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "alias", "set", "state", "7"])
+        .assert()
+        .success();
+
     // 토큰을 다시 주지 않아도 URL 만 갱신할 수 있어야 한다.
     AssertCommand::cargo_bin("redmine")
         .unwrap()
@@ -548,6 +612,10 @@ fn config_server_add_force_keeps_the_existing_token() {
     assert!(
         yml.contains("api_token: tok"),
         "기존 토큰이 유지돼야 한다: {yml}"
+    );
+    assert!(
+        yml.contains("state: 7"),
+        "덮어써도 alias 는 살아야 한다: {yml}"
     );
 }
 
