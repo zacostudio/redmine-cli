@@ -20,9 +20,9 @@ cargo install --git https://github.com/zacostudio/redmine-cli
 `config.yml` 하나에 Redmine 서버를 여러 개 적어 두고 이름으로 골라 씁니다. 회사 Redmine 과
 개인 Redmine 을 같은 CLI 로 오갈 때 쓰는 구조입니다.
 
-경로는 macOS 는 `~/Library/Application Support/redmine-cli/config.yml`,
-Linux 는 `~/.config/redmine-cli/config.yml` 입니다. `--config <path>` 로 바꿀 수 있고,
-`redmine config server list` 를 실행하면 실제 경로가 출력됩니다.
+경로는 macOS·Linux 모두 `~/.config/redmine-cli/config.yml` 입니다. `XDG_CONFIG_HOME` 이
+설정돼 있으면 그 아래를 씁니다. `--config <path>` 로 바꿀 수 있고, `redmine config server list`
+를 실행하면 실제 경로가 출력됩니다.
 
 ```yaml
 default_server: company
@@ -86,6 +86,16 @@ redmine --server company --server-url https://staging.example.com issues   # ali
 ```bash
 redmine --server-url https://redmine.example.com --api-token-file /run/secrets/redmine issues
 redmine --api-token-file ./token config server add company --url https://redmine.example.com
+```
+
+### 0.4.0 에서 올라오는 경우
+
+0.4.0 은 macOS 에서 `~/Library/Application Support/redmine-cli/config.yml` 을 썼습니다.
+0.5.0 부터는 Linux 와 같은 `~/.config` 를 쓰므로 파일을 옮겨 주세요. 옮기지 않으면 첫 실행
+에러가 예전 경로와 `mv` 명령을 알려 줍니다.
+
+```bash
+mv ~/Library/Application\ Support/redmine-cli/config.yml ~/.config/redmine-cli/config.yml
 ```
 
 ### 0.3.0 이하에서 올라오는 경우

@@ -898,6 +898,68 @@ fn leftover_config_toml_is_named_in_the_error() {
 }
 
 #[test]
+fn default_config_path_follows_xdg_on_every_platform() {
+    let tmp = tempfile::tempdir().unwrap();
+    let xdg = tmp.path().join("xdg");
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", &xdg)
+        .args(["config", "server", "list"])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(
+        v["path"].as_str().unwrap(),
+        xdg.join("redmine-cli/config.yml").to_str().unwrap()
+    );
+
+    // XDG 가 없으면 ~/.config 를 쓴다. macOS 도 마찬가지다.
+    let home = tmp.path().join("home");
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .env_remove("XDG_CONFIG_HOME")
+        .env("HOME", &home)
+        .args(["config", "server", "list"])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(
+        v["path"].as_str().unwrap(),
+        home.join(".config/redmine-cli/config.yml")
+            .to_str()
+            .unwrap()
+    );
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn config_left_in_the_0_4_0_location_is_pointed_out() {
+    let tmp = tempfile::tempdir().unwrap();
+    let home = tmp.path().join("home");
+    let old = home.join("Library/Application Support/redmine-cli");
+    std::fs::create_dir_all(&old).unwrap();
+    std::fs::write(
+        old.join("config.yml"),
+        "servers:\n  a:\n    url: https://a.invalid\n    api_token: t\n",
+    )
+    .unwrap();
+
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .env_remove("XDG_CONFIG_HOME")
+        .env("HOME", &home)
+        .args(["issues"])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("Application Support"), "{stderr}");
+    assert!(
+        stderr.contains("mv "),
+        "옮기는 명령까지 알려야 한다: {stderr}"
+    );
+}
+
+#[test]
 fn empty_config_reports_no_server_configured() {
     let tmp = tempfile::tempdir().unwrap();
     let cfg_path = tmp.path().join("config.yml");

@@ -104,23 +104,35 @@ pub enum ConfigError {
     DefaultServerNotFound { name: String, available: String },
     #[error("several servers configured and no default_server; pick one with --server <name> (available: {available})")]
     NoServerSelected { available: String },
+    #[error(
+        "no Redmine server configured in {new}; 0.4.0 kept it at {old}. \
+         Move it with: mv \"{old}\" \"{new}\""
+    )]
+    MovedConfigPath { new: PathBuf, old: PathBuf },
     #[error("failed to read config file at {0}: {1}")]
     Io(PathBuf, String),
     #[error("failed to parse config file at {0}: {1}")]
     Parse(PathBuf, String),
 }
 
-/// 설정이 비었을 때의 에러. 옆에 0.3.0 의 config.toml 이 남아 있으면 그 사실을 알린다.
-/// 파일을 열지는 않는다 — 존재 여부만 본다. 설정 포맷은 config.yml 하나다.
+/// 설정이 비었을 때의 에러. 예전 위치에 파일이 남아 있으면 그 사실을 알린다.
+/// 파일을 열지는 않는다 — 존재 여부만 본다. 설정 파일은 config.yml 하나다.
 fn no_server_configured(path: &Path) -> ConfigError {
     let legacy = path.with_extension("toml");
-    match legacy.exists() {
-        true => ConfigError::LegacyTomlPresent {
+    if legacy.exists() {
+        return ConfigError::LegacyTomlPresent {
             yml: path.to_path_buf(),
             toml: legacy,
-        },
-        false => ConfigError::NoServerConfigured(path.to_path_buf()),
+        };
     }
+    #[cfg(target_os = "macos")]
+    if let Some(old) = legacy_macos_config_path().filter(|p| p.exists() && p != path) {
+        return ConfigError::MovedConfigPath {
+            new: path.to_path_buf(),
+            old,
+        };
+    }
+    ConfigError::NoServerConfigured(path.to_path_buf())
 }
 
 /// API 토큰은 그대로 HTTP 헤더가 된다. 공백·개행이 섞이면 요청 자체를 만들 수 없다.
@@ -249,10 +261,43 @@ pub fn resolve_from(
 }
 
 const CONFIG_FILE_NAME: &str = "config.yml";
+const APP_DIR_NAME: &str = "redmine-cli";
+
+/// 설정 디렉터리. macOS 도 Linux 와 같은 `~/.config` 를 쓴다. OS 표준(macOS 의
+/// `~/Library/Application Support`)을 따르면 같은 도구의 설정이 기계마다 다른 곳에 놓여서,
+/// 손으로 열어 보거나 dotfiles 로 관리하기 번거롭다.
+fn config_dir_from(
+    xdg: Option<&std::ffi::OsStr>,
+    home: Option<&std::ffi::OsStr>,
+) -> Option<PathBuf> {
+    if let Some(x) = xdg.filter(|s| !s.is_empty()) {
+        return Some(PathBuf::from(x).join(APP_DIR_NAME));
+    }
+    home.filter(|s| !s.is_empty())
+        .map(|h| PathBuf::from(h).join(".config").join(APP_DIR_NAME))
+}
 
 fn default_config_path() -> Option<PathBuf> {
-    directories::ProjectDirs::from("", "", "redmine-cli")
-        .map(|p| p.config_dir().join(CONFIG_FILE_NAME))
+    let xdg = std::env::var_os("XDG_CONFIG_HOME");
+    let home = home_dir();
+    config_dir_from(xdg.as_deref(), home.as_deref()).map(|d| d.join(CONFIG_FILE_NAME))
+}
+
+fn home_dir() -> Option<std::ffi::OsString> {
+    // Windows 는 HOME 이 없을 수 있어 USERPROFILE 로 떨어진다.
+    std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))
+}
+
+/// 0.4.0 이 쓰던 macOS 표준 위치. 0.5.0 에서 `~/.config` 로 옮겨졌고, 남아 있으면 안내만 한다.
+#[cfg(target_os = "macos")]
+fn legacy_macos_config_path() -> Option<PathBuf> {
+    home_dir().map(|h| {
+        PathBuf::from(h)
+            .join("Library")
+            .join("Application Support")
+            .join(APP_DIR_NAME)
+            .join(CONFIG_FILE_NAME)
+    })
 }
 
 fn load_file(explicit: Option<PathBuf>) -> Result<FileConfig, ConfigError> {
@@ -525,6 +570,25 @@ mod tests {
         let cfg = resolve_from(&file, &overrides(None), &dummy_path()).unwrap();
         let dumped = format!("{cfg:?}");
         assert!(!dumped.contains("ctok"), "{dumped}");
+    }
+
+    #[test]
+    fn config_dir_prefers_xdg_then_home_dot_config() {
+        use std::ffi::OsStr;
+        assert_eq!(
+            config_dir_from(Some(OsStr::new("/x/cfg")), Some(OsStr::new("/home/u"))),
+            Some(PathBuf::from("/x/cfg/redmine-cli"))
+        );
+        // 빈 XDG_CONFIG_HOME 은 없는 것과 같이 다룬다.
+        assert_eq!(
+            config_dir_from(Some(OsStr::new("")), Some(OsStr::new("/home/u"))),
+            Some(PathBuf::from("/home/u/.config/redmine-cli"))
+        );
+        assert_eq!(
+            config_dir_from(None, Some(OsStr::new("/home/u"))),
+            Some(PathBuf::from("/home/u/.config/redmine-cli"))
+        );
+        assert_eq!(config_dir_from(None, None), None);
     }
 
     #[test]

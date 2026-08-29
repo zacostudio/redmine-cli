@@ -114,3 +114,17 @@ stdin 으로 읽는다(`src/cli/issues.rs:337`, `src/cli/wiki.rs:108`). 토큰�
 (`issue create`, `wiki` 도 같다), 타임아웃을 넣으면 정상적인 느린 파이프를 끊는다. 서브커맨드가
 안 쓰는 global flag(`--server` 를 config server add 에 준 경우 등)를 조용히 무시하는 것도
 그대로 뒀다 — 에러로 만들면 스크립트가 flag 를 일괄로 붙이는 흔한 사용을 깨뜨린다.
+
+## 2026-08-29 설정 경로를 ~/.config 로 통일 (0.5.0)
+
+`directories` 크레이트가 주는 OS 표준 경로를 쓰면 macOS 만 `~/Library/Application Support` 로
+갈라진다. 사용자가 "Linux 와 같은 위치를 쓰면 안 되냐" 고 물었고, 실제로 설정을 손으로 열거나
+dotfiles 로 관리할 때 기계마다 경로가 다른 쪽이 불편하다. git, gh, nvim 처럼 macOS 에서도
+`~/.config` 를 쓰는 CLI 가 이미 많다.
+
+경로 규칙을 `XDG_CONFIG_HOME` → `~/.config` 로 단순화하고 `directories` 의존성을 없앴다.
+경로 계산은 env 를 직접 읽지 않는 순수 함수(`config_dir_from`)로 빼서 단위 테스트가 가능하다 —
+env 를 세팅하는 테스트는 병렬 실행에서 서로를 덮어쓴다.
+
+0.4.0 이 쓰던 macOS 경로에 파일이 남아 있으면 에러가 `mv` 명령까지 알려준다. 자동으로 옮기지는
+않는다. 자동 이동은 사용자가 모르는 사이에 파일이 사라지는 일이고, 이 파일에는 토큰이 들어 있다.

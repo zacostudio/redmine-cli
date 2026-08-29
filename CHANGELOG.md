@@ -7,6 +7,12 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-29
+### Changed
+- **BREAKING**: 설정 파일 위치를 macOS 에서도 `~/.config/redmine-cli/config.yml` 로 통일했다. 0.4.0 까지는 macOS 표준인 `~/Library/Application Support/` 를 썼는데, 같은 도구의 설정이 기계마다 다른 곳에 놓여 손으로 열어 보거나 dotfiles 로 관리하기 번거로웠다. `XDG_CONFIG_HOME` 이 설정돼 있으면 그 아래를 쓴다.
+- 예전 위치에 `config.yml` 이 남아 있으면 첫 실행 에러가 그 경로와 옮기는 `mv` 명령을 알려준다.
+- `directories` 의존성 제거. 경로 규칙이 한 곳(`XDG_CONFIG_HOME` → `~/.config`)으로 단순해졌다.
+
 ## [0.4.0] - 2026-08-29
 ### Added
 - Redmine 서버를 여러 개 설정하고 `--server <name>` 으로 골라 쓸 수 있다. 회사 Redmine 과 개인 Redmine 을 이름으로 구분한다. (57e7186)
