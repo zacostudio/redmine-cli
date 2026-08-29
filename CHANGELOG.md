@@ -12,11 +12,11 @@
 - `config server use <name>` — `--server` 없이 쓸 기본 서버 지정. (57e7186)
 
 ### Changed
-- **BREAKING**: 설정 파일이 `config.toml` 에서 `config.yml` 로 바뀌었다. `config.toml` 은 읽지 않으며 자동 변환도 하지 않는다. `config.yml` 을 새로 작성해야 한다. (57e7186, 193d82a)
+- **BREAKING**: 설정 파일이 `config.toml` 에서 `config.yml` 로 바뀌었다. `config.toml` 은 읽지 않으며 자동 변환도 하지 않는다. `config.yml` 을 새로 작성해야 한다. (57e7186, b51c4a7)
 - **BREAKING**: `REDMINE_URL` / `REDMINE_API_TOKEN` 환경 변수를 더 이상 읽지 않는다. 자격증명은 `config.yml` 또는 `--server-url` / `--api-token` 으로만 지정한다. (57e7186)
 - custom field alias 가 서버별로 분리됐다. `config alias set/remove/list` 는 선택된 서버(`--server` 또는 `default_server`)에만 적용된다. (57e7186)
 - `--server-url` / `--api-token` 은 선택된 서버의 해당 필드를 덮어쓴다. `--server` 없이 둘 다 주면 설정 파일과 무관한 ad-hoc 호출이 된다. (57e7186)
-- `toml` 의존성 제거. 설정 파일 파싱은 `serde_norway`(YAML) 하나로 끝난다. (193d82a)
+- `toml` 의존성 제거. 설정 파일 파싱은 `serde_norway`(YAML) 하나로 끝난다. (b51c4a7)
 - `config::parse_custom_field` 의 alias 인자가 `HashMap` 에서 `BTreeMap` 으로 바뀌었다. 저장 시 줄 순서를 고정해 diff 를 읽을 수 있게 하기 위해서다. **라이브러리 사용자 영향.** (57e7186)
 
 ### Fixed
