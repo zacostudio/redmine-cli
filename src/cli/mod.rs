@@ -29,15 +29,19 @@ use crate::output;
 #[derive(Parser)]
 #[command(name = "redmine", version, about = "Standalone CLI for Redmine")]
 pub struct Cli {
-    /// Override server URL (defaults to env REDMINE_URL or config file).
+    /// Redmine server to use, by name from config.yml (defaults to default_server).
+    #[arg(long, global = true)]
+    pub server: Option<String>,
+
+    /// Override the URL of the selected server.
     #[arg(long, global = true)]
     pub server_url: Option<String>,
 
-    /// Override API token (defaults to env REDMINE_API_TOKEN or config file).
+    /// Override the API token of the selected server.
     #[arg(long, global = true)]
     pub api_token: Option<String>,
 
-    /// Path to config.toml (defaults to ~/.config/redmine-cli/config.toml).
+    /// Path to config.yml (defaults to the per-user config dir).
     #[arg(long, global = true)]
     pub config: Option<std::path::PathBuf>,
 
@@ -49,6 +53,7 @@ pub struct Cli {
 impl std::fmt::Debug for Cli {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Cli")
+            .field("server", &self.server)
             .field("server_url", &self.server_url)
             .field("api_token", &self.api_token.as_ref().map(|_| "<REDACTED>"))
             .field("config", &self.config)
@@ -116,7 +121,7 @@ pub enum Command {
     /// Attachments: list/download/upload/delete.
     #[command(subcommand)]
     Attachment(attachments::AttachmentCommand),
-    /// Manage CLI configuration (custom field aliases).
+    /// Manage CLI configuration (servers, custom field aliases).
     #[command(subcommand)]
     Config(config_cmd::ConfigCommand),
 }
@@ -126,10 +131,11 @@ pub fn run(cli: Cli) {
 
     // config 서브커맨드는 Redmine 자격증명 없이 동작한다.
     if let Command::Config(sub) = cli.command {
-        return config_cmd::handle(sub, config_path_override);
+        return config_cmd::handle(sub, config_path_override, cli.server);
     }
 
     let overrides = CliOverrides {
+        server: cli.server,
         server_url: cli.server_url,
         api_token: cli.api_token,
         config_path: cli.config,

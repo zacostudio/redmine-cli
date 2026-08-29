@@ -27,8 +27,9 @@ async fn issues_search_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["issues", "--limit", "1"])
         .assert()
         .success();
@@ -57,8 +58,9 @@ async fn issue_get_by_id_returns_full() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["issue", "42"])
         .assert()
         .success();
@@ -69,42 +71,55 @@ async fn issue_get_by_id_returns_full() {
     assert_eq!(v["subject"], "answer");
 }
 
+/// config.yml 을 만들어 두는 헬퍼. 서버 하나는 mock 서버를, 하나는 쓰지 않는 URL 을 가리킨다.
+fn write_config(path: &std::path::Path, company_url: &str) {
+    std::fs::write(
+        path,
+        format!(
+            "default_server: company\n\
+             servers:\n\
+             \x20 company:\n\
+             \x20   url: {company_url}\n\
+             \x20   api_token: secret\n\
+             \x20   custom_fields:\n\
+             \x20     state: 7\n\
+             \x20 personal:\n\
+             \x20   url: https://personal.invalid\n\
+             \x20   api_token: ptok\n\
+             \x20   custom_fields:\n\
+             \x20     state: 3\n"
+        ),
+    )
+    .unwrap();
+}
+
 #[test]
 fn config_alias_round_trip() {
     let tmp = tempfile::tempdir().unwrap();
-    let cfg_path = tmp.path().join("config.toml");
+    let cfg_path = tmp.path().join("config.yml");
+    write_config(&cfg_path, "https://company.invalid");
+    let cfg = cfg_path.to_str().unwrap();
 
-    // initial list — empty
+    // 기본 서버(company)의 alias 를 본다.
     let out = AssertCommand::cargo_bin("redmine")
         .unwrap()
-        .args([
-            "--config",
-            cfg_path.to_str().unwrap(),
-            "config",
-            "alias",
-            "list",
-        ])
+        .args(["--config", cfg, "config", "alias", "list"])
         .assert()
         .success();
     let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert!(v["aliases"].as_object().unwrap().is_empty());
+    assert_eq!(v["server"], "company");
+    assert_eq!(v["aliases"]["state"], 7);
 
-    // set
+    // set — --server 로 지정한 서버에만 들어가야 한다.
     AssertCommand::cargo_bin("redmine")
         .unwrap()
         .args([
-            "--config",
-            cfg_path.to_str().unwrap(),
-            "config",
-            "alias",
-            "set",
-            "state",
-            "7",
+            "--config", cfg, "--server", "personal", "config", "alias", "set", "qa", "8",
         ])
         .assert()
         .success();
 
-    // 보안: 토큰을 평문 보관할 수 있는 파일이므로 Unix 에서는 반드시 0600 이어야 한다.
+    // 보안: 토큰을 평문 보관하는 파일이므로 Unix 에서는 반드시 0600 이어야 한다.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -112,40 +127,184 @@ fn config_alias_round_trip() {
         assert_eq!(
             meta.permissions().mode() & 0o777,
             0o600,
-            "config.toml must be 0600 to protect any stored api_token"
+            "config.yml must be 0600 to protect the stored api_token"
         );
     }
 
-    // list — now has state=7
     let out = AssertCommand::cargo_bin("redmine")
         .unwrap()
         .args([
-            "--config",
-            cfg_path.to_str().unwrap(),
-            "config",
-            "alias",
-            "list",
+            "--config", cfg, "--server", "personal", "config", "alias", "list",
         ])
         .assert()
         .success();
     let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(v["aliases"]["state"], 7);
+    assert_eq!(v["aliases"]["qa"], 8);
+    assert_eq!(v["aliases"]["state"], 3, "서버별 alias 는 섞이지 않는다");
+
+    // company 쪽에는 qa 가 없어야 한다.
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "alias", "list"])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(v["aliases"]["qa"].is_null());
 
     // remove
     AssertCommand::cargo_bin("redmine")
         .unwrap()
         .args([
-            "--config",
-            cfg_path.to_str().unwrap(),
-            "config",
-            "alias",
-            "remove",
-            "state",
+            "--config", cfg, "--server", "personal", "config", "alias", "remove", "qa",
         ])
         .assert()
         .success();
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config", cfg, "--server", "personal", "config", "alias", "list",
+        ])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(v["aliases"]["qa"].is_null());
+}
 
-    // list — empty again
+#[test]
+fn config_server_list_hides_tokens_and_use_sets_default() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    write_config(&cfg_path, "https://company.invalid");
+    let cfg = cfg_path.to_str().unwrap();
+
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "list"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8(out.get_output().stdout.clone()).unwrap();
+    assert!(
+        !stdout.contains("secret") && !stdout.contains("ptok"),
+        "server list 는 토큰을 출력하면 안 된다: {stdout}"
+    );
+    let v: Value = serde_json::from_str(stdout.trim()).unwrap();
+    assert_eq!(v["default_server"], "company");
+    let servers = v["servers"].as_array().unwrap();
+    assert_eq!(servers.len(), 2);
+    assert_eq!(servers[0]["name"], "company");
+    assert_eq!(servers[0]["default"], true);
+
+    // use — 기본 서버를 바꾼다.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "use", "personal"])
+        .assert()
+        .success();
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "list"])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(v["default_server"], "personal");
+
+    // 없는 이름은 에러.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "config", "server", "use", "nope"])
+        .assert()
+        .failure();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn server_flag_picks_the_configured_server() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/issues.json"))
+        .and(header("X-Redmine-API-Key", "secret"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "issues": [], "total_count": 0
+        })))
+        .mount(&server)
+        .await;
+
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
+    write_config(&cfg_path, &server.uri());
+    let cfg = cfg_path.to_str().unwrap();
+
+    // 기본 서버(company)로 호출 — mock 서버에 도달한다.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "issues"])
+        .assert()
+        .success();
+
+    // --server company 로 명시해도 같다.
+    AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "--server", "company", "issues"])
+        .assert()
+        .success();
+
+    // 없는 서버 이름은 사용 가능한 이름을 알려주며 실패한다.
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args(["--config", cfg, "--server", "nope", "issues"])
+        .assert()
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(
+        stderr.contains("company") && stderr.contains("personal"),
+        "{stderr}"
+    );
+}
+
+#[test]
+fn legacy_config_toml_is_migrated_once() {
+    let tmp = tempfile::tempdir().unwrap();
+    let toml_path = tmp.path().join("config.toml");
+    let yml_path = tmp.path().join("config.yml");
+    std::fs::write(
+        &toml_path,
+        "server_url = \"https://old.invalid\"\napi_token = \"otok\"\n\n[custom_fields]\nstate = 7\n",
+    )
+    .unwrap();
+
+    let out = AssertCommand::cargo_bin("redmine")
+        .unwrap()
+        .args([
+            "--config",
+            yml_path.to_str().unwrap(),
+            "config",
+            "server",
+            "list",
+        ])
+        .assert()
+        .success();
+    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(v["default_server"], "default");
+    let servers = v["servers"].as_array().unwrap();
+    assert_eq!(servers[0]["url"], "https://old.invalid");
+    assert_eq!(servers[0]["custom_fields"]["state"], 7);
+
+    // 변환된 파일이 생기고, 원본 config.toml 은 남아 있어야 한다.
+    assert!(yml_path.exists());
+    assert!(toml_path.exists());
+    let yml = std::fs::read_to_string(&yml_path).unwrap();
+    assert!(yml.contains("otok"), "토큰이 옮겨져야 한다: {yml}");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let meta = std::fs::metadata(&yml_path).unwrap();
+        assert_eq!(meta.permissions().mode() & 0o777, 0o600);
+    }
+}
+
+#[test]
+fn empty_config_reports_no_server_configured() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cfg_path = tmp.path().join("config.yml");
     let out = AssertCommand::cargo_bin("redmine")
         .unwrap()
         .args([
@@ -156,9 +315,9 @@ fn config_alias_round_trip() {
             "list",
         ])
         .assert()
-        .success();
-    let v: Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert!(v["aliases"].as_object().unwrap().is_empty());
+        .failure();
+    let stderr = String::from_utf8(out.get_output().stderr.clone()).unwrap();
+    assert!(stderr.contains("no Redmine server"), "{stderr}");
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -178,8 +337,9 @@ async fn roles_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["roles"])
         .assert()
         .success();
@@ -207,8 +367,9 @@ async fn document_categories_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["document-categories"])
         .assert()
         .success();
@@ -246,8 +407,9 @@ async fn custom_fields_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["custom-fields"])
         .assert()
         .success();
@@ -280,8 +442,9 @@ async fn search_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["search", "bug", "--limit", "10"])
         .assert()
         .success();
@@ -309,8 +472,9 @@ async fn version_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["version", "list", "demo"])
         .assert()
         .success();
@@ -335,8 +499,9 @@ async fn version_create_posts_and_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["version", "create", "demo", "--name", "v2.0"])
         .assert()
         .success();
@@ -368,8 +533,9 @@ async fn membership_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["membership", "list", "demo"])
         .assert()
         .success();
@@ -399,8 +565,9 @@ async fn membership_add_posts_and_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["membership", "add", "demo", "--user", "11", "--role", "4,5"])
         .assert()
         .success();
@@ -427,8 +594,9 @@ async fn news_list_global_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["news", "list"])
         .assert()
         .success();
@@ -451,8 +619,9 @@ async fn news_create_posts_and_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args([
             "news",
             "create",
@@ -491,8 +660,9 @@ async fn file_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["file", "list", "demo"])
         .assert()
         .success();
@@ -520,8 +690,9 @@ async fn query_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["query"])
         .assert()
         .success();
@@ -548,8 +719,9 @@ async fn wiki_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["wiki", "list", "demo"])
         .assert()
         .success();
@@ -581,8 +753,9 @@ async fn wiki_show_returns_full_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["wiki", "show", "demo", "Roadmap"])
         .assert()
         .success();
@@ -606,8 +779,9 @@ async fn wiki_put_creates_or_updates() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args([
             "wiki",
             "update",
@@ -638,8 +812,9 @@ async fn wiki_show_404_surfaces_error() {
 
     Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["wiki", "show", "demo", "Missing"])
         .assert()
         .failure();
@@ -661,8 +836,9 @@ async fn group_list_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["group", "list"])
         .assert()
         .success();
@@ -686,8 +862,9 @@ async fn group_create_posts_and_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["group", "create", "--name", "Reviewers", "--user", "1"])
         .assert()
         .success();
@@ -720,8 +897,9 @@ async fn my_account_show_returns_json() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["my-account", "show"])
         .assert()
         .success();
@@ -744,8 +922,9 @@ async fn issue_watcher_add_posts() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args(["issue", "42", "watcher", "add", "--user", "7"])
         .assert()
         .success();
@@ -767,8 +946,9 @@ async fn issue_note_puts_journal() {
 
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args([
             "issue",
             "42",
@@ -806,8 +986,9 @@ async fn attachment_download_rejects_foreign_host() {
     let out_path = tmp.path().join("out.bin");
     let assert = Command::cargo_bin("redmine")
         .unwrap()
-        .env("REDMINE_URL", server.uri())
-        .env("REDMINE_API_TOKEN", "secret")
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
         .args([
             "attachment",
             "download",
