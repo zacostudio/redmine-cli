@@ -19,6 +19,9 @@
 - `toml` 의존성 제거. 설정 파일 파싱은 `serde_norway`(YAML) 하나로 끝난다. (b51c4a7)
 - `config::parse_custom_field` 의 alias 인자가 `HashMap` 에서 `BTreeMap` 으로 바뀌었다. 저장 시 줄 순서를 고정해 diff 를 읽을 수 있게 하기 위해서다. **라이브러리 사용자 영향.** (57e7186)
 
+### Security
+- `h2` 0.4.14 -> 0.4.19 (RUSTSEC-2026-0258, unbounded empty DATA frames), `quinn-proto` 0.11.14 -> 0.11.17 (RUSTSEC-2026-0185, remote memory exhaustion) 갱신. 둘 다 `reqwest` 경유의 간접 의존성이다.
+
 ### Fixed
 - CI 워크플로의 push 트리거가 `main` 을 보고 있어 기본 브랜치 `master` 푸시에 CI 가 돌지 않던 문제. (af41a0a)
 
