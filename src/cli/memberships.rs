@@ -23,6 +23,10 @@ pub enum MembershipCommand {
 #[derive(Args, Debug)]
 pub struct ListArgs {
     pub project: String,
+    #[arg(long, default_value_t = 25)]
+    pub limit: u64,
+    #[arg(long, default_value_t = 0)]
+    pub offset: u64,
 }
 
 #[derive(Args, Debug)]
@@ -83,7 +87,7 @@ fn membership_to_json(m: &RedmineMembership) -> Value {
 }
 
 fn list(a: ListArgs, client: &RedmineClient) {
-    match client.list_memberships(&a.project) {
+    match client.list_memberships(&a.project, a.limit, a.offset) {
         Ok(r) => {
             let items: Vec<_> = r.memberships.iter().map(membership_to_json).collect();
             output::print_json(json!({ "memberships": items, "total_count": r.total_count }));

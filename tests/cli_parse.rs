@@ -233,6 +233,39 @@ fn parses_membership_add_with_multi_role() {
 }
 
 #[test]
+fn parses_membership_list_with_defaults() {
+    let cli = parse(&["membership", "list", "demo"]);
+    match cli.command {
+        Command::Membership(redmine_cli::cli::memberships::MembershipCommand::List(a)) => {
+            assert_eq!(a.project, "demo");
+            assert_eq!(a.limit, 25);
+            assert_eq!(a.offset, 0);
+        }
+        _ => panic!("expected Membership::List"),
+    }
+}
+
+#[test]
+fn parses_membership_list_with_limit_and_offset() {
+    let cli = parse(&[
+        "membership",
+        "list",
+        "demo",
+        "--limit",
+        "100",
+        "--offset",
+        "25",
+    ]);
+    match cli.command {
+        Command::Membership(redmine_cli::cli::memberships::MembershipCommand::List(a)) => {
+            assert_eq!(a.limit, 100);
+            assert_eq!(a.offset, 25);
+        }
+        _ => panic!("expected Membership::List"),
+    }
+}
+
+#[test]
 fn parses_membership_remove() {
     let cli = parse(&["membership", "remove", "42"]);
     match cli.command {

@@ -1206,6 +1206,50 @@ async fn membership_list_returns_json() {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn membership_list_forwards_limit_and_offset() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/projects/demo/memberships.json"))
+        .and(query_param("limit", "100"))
+        .and(query_param("offset", "25"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "memberships": [
+                {
+                    "id": 6,
+                    "project": {"id": 1, "name": "demo"},
+                    "user": {"id": 11, "name": "bob"},
+                    "roles": [{"id": 4, "name": "Developer"}]
+                }
+            ],
+            "total_count": 59
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
+        .args([
+            "membership",
+            "list",
+            "demo",
+            "--limit",
+            "100",
+            "--offset",
+            "25",
+        ])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["total_count"], 59);
+    assert_eq!(v["memberships"][0]["user"]["name"], "bob");
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn membership_add_posts_and_returns_json() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))

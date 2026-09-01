@@ -6,6 +6,8 @@
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 ## [Unreleased]
+### Fixed
+- `membership list` 이 프로젝트 멤버를 25명까지만 반환하던 문제. `limit` 을 아예 보내지 않아 Redmine 의 기본 페이지 크기 25가 그대로 적용됐고, 그 이상은 꺼낼 방법이 없었다. `--limit` (기본 25) 과 `--offset` (기본 0) 을 추가해 `issues` / `projects` 와 같은 형태로 맞췄다. 멤버가 59명인 프로젝트에서 `--limit 100` 으로 59명을 모두 받는 것을 확인했다.
 
 ## [0.4.1] - 2026-08-29
 ### Changed

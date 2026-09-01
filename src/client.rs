@@ -442,13 +442,18 @@ impl RedmineClient {
         self.delete(&format!("/versions/{}.json", id))
     }
 
-    pub fn list_memberships(&self, project_id: &str) -> Result<MembershipsResponse, ClientError> {
+    pub fn list_memberships(
+        &self,
+        project_id: &str,
+        limit: u64,
+        offset: u64,
+    ) -> Result<MembershipsResponse, ClientError> {
         self.get(
             &format!(
                 "/projects/{}/memberships.json",
                 urlencoding::encode(project_id)
             ),
-            &[],
+            &[("limit", limit.to_string()), ("offset", offset.to_string())],
         )
     }
 
