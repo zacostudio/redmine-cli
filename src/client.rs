@@ -208,10 +208,19 @@ impl RedmineClient {
         )
     }
 
-    pub fn search_users(&self, name: &str, limit: u64) -> Result<UsersResponse, ClientError> {
+    pub fn search_users(
+        &self,
+        name: &str,
+        limit: u64,
+        offset: u64,
+    ) -> Result<UsersResponse, ClientError> {
         self.get(
             "/users.json",
-            &[("name", name.to_string()), ("limit", limit.to_string())],
+            &[
+                ("name", name.to_string()),
+                ("limit", limit.to_string()),
+                ("offset", offset.to_string()),
+            ],
         )
     }
 

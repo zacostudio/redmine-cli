@@ -80,6 +80,59 @@ TDD 로 진행했다. `cli_parse.rs` 의 파싱 테스트 2개는 `ListArgs` 에
 
 실측: 기본 25/186, `--limit 100` 은 100건, `--limit 100 --offset 100` 은 86건 (100+86=186).
 
-## 남은 것
+## 2026-09-01 코드 리뷰 후 — 판정 기준이 틀렸다
 
-없다. 목록을 반환하는 client 함수는 전부 확인했다.
+`/code-review` 가 `search_users` 와 `list_time_entries` 를 짚었고, 확인해 보니 맞았다.
+**앞 절의 2단계 방법은 `offset` 누락을 구조적으로 못 잡는다.** 1단계 조건이 "파라미터를 빈
+배열로 보내는 함수" 였는데, 이 둘은 `name` 이나 필터와 함께 `limit` 은 보내고 있어서 후보에
+아예 오르지 못했다. `&[]` grep 이 못 미더워서 바꾼 기준이 같은 종류의 구멍을 남긴 것이다.
+
+올바른 기준은 **응답 타입에 `total_count` 가 있는데 `limit` 또는 `offset` 중 하나라도 안 보내는
+것** 이다. CLI 층에서 파라미터를 조립하는 명령(`issues`, `search`, `news`, `time-entry`)은
+client 함수만 봐서는 알 수 없으므로 `src/cli/*.rs` 의 `pub limit` / `pub offset` 도 같이 봐야 한다.
+
+이 기준으로 다시 훑은 결과:
+
+| 명령 | limit | offset | 판정 |
+|---|---|---|---|
+| `issues` | O | O | 정상 |
+| `projects` | O | O | 정상 |
+| `search` | O | O | 정상 |
+| `news list` | O | O | 정상 |
+| `membership list` | O | O | 이번에 고침 |
+| `query` | O | O | 이번에 고침 |
+| `time-entry list` | O | **X** | **고침** |
+| `users` | O | **X** | **고침** |
+
+`time_entries.json` 은 실측 total_count 가 51,369 이고 `offset=3` 이 다른 구간을 돌려준다.
+`--offset` 이 없으면 5만 건 중 앞의 25건 바깥은 볼 방법이 없었다.
+
+`users.json` 은 admin 전용이라 이 계정으로는 실측이 불가능했다(403). `UsersResponse` 에
+`total_count` 가 있고 공식 문서 예시에도 페이지 정보가 있다는 근거로 고쳤다 — **실서버 검증은
+못 했다.**
+
+`limit` 상한은 100 으로 실측 확인했다. `limit=200`, `limit=500` 모두 100건만 온다.
+
+## 2026-09-01 기본값 전송 회귀 테스트
+
+리뷰가 "기본값이 실제로 전송되는지 지키는 테스트가 없다" 고 지적했고, 확인해 보니 사실이었다.
+`list_memberships` 를 다시 `&[]` 로 되돌려도 테스트가 전부 통과했다. 기존 기본 경로 테스트가
+`path()` 만 보고 쿼리 문자열은 보지 않았기 때문이다.
+
+`membership_list_returns_json` 과 `query_list_returns_json` 에 `query_param("limit","25")` /
+`query_param("offset","0")` 을 넣었다. 같은 회귀를 다시 심어서 이번에는 FAILED 가 나는 것을
+확인했다.
+
+## 남은 것 (판단 필요)
+
+리뷰가 짚은 것 중 손대지 않은 것들. 전부 이 변경 이전부터 있던 사안이다.
+
+- **기본값 25 유지.** `membership list` 를 그냥 치면 여전히 59명 중 25명만 온다. `--all` 이나
+  자동 페이징을 넣으면 해결되지만, 다른 8개 명령과 기본값이 달라진다. 일관성을 택했다.
+- **`limit` 범위 검증 없음.** `--limit 0` 은 서버가 25로, `--limit 500` 은 100으로 조용히
+  바꾼다. `value_parser!(u64).range(1..=100)` 이면 즉시 에러가 된다. 다만 같은 문제가
+  `projects`, `news`, `search` 등에도 있어 여기만 고치면 오히려 어긋난다.
+- **출력에 실제 적용된 `limit`/`offset` 없음.** `search` 는 돌려주는데(`src/cli/search.rs:62-64`)
+  나머지는 `total_count` 만 준다. 서버가 값을 깎았는지 호출자가 알 수 없다.
+- **`limit`/`offset` 선언 중복 8곳.** `#[command(flatten)]` 으로 공유 `PageArgs` 를 만들면
+  이번 같은 누락이 "flatten 이 없다" 로 눈에 띈다. 구조 변경이라 별도 작업으로 남긴다.

@@ -23,8 +23,10 @@ pub enum MembershipCommand {
 #[derive(Args, Debug)]
 pub struct ListArgs {
     pub project: String,
+    /// Maximum rows to return. Redmine caps this at 100.
     #[arg(long, default_value_t = 25)]
     pub limit: u64,
+    /// Rows to skip, for paging past the first `--limit` rows.
     #[arg(long, default_value_t = 0)]
     pub offset: u64,
 }

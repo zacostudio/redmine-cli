@@ -10,8 +10,12 @@ use crate::output;
 pub struct UsersArgs {
     #[arg(long)]
     pub name: String,
+    /// Maximum rows to return. Redmine caps this at 100.
     #[arg(long, default_value_t = 25)]
     pub limit: u64,
+    /// Rows to skip, for paging past the first `--limit` rows.
+    #[arg(long, default_value_t = 0)]
+    pub offset: u64,
 }
 
 #[derive(Serialize)]
@@ -24,7 +28,7 @@ struct UserOut {
 }
 
 pub fn handle(args: UsersArgs, client: &RedmineClient) {
-    let resp = match client.search_users(&args.name, args.limit) {
+    let resp = match client.search_users(&args.name, args.limit, args.offset) {
         Ok(r) => r,
         Err(e) => output::print_error(&format!("redmine users: {e}")),
     };

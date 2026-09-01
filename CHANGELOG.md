@@ -7,8 +7,13 @@
 
 ## [Unreleased]
 ### Fixed
-- `query` 가 저장된 쿼리를 25개까지만 반환하던 문제. `membership list` 와 같은 원인으로 `limit` 을 보내지 않고 있었다. `--limit` (기본 25) 과 `--offset` (기본 0) 을 추가했다. 저장된 쿼리가 186개인 서버에서 `--limit 100 --offset 100` 까지 186개를 모두 훑는 것을 확인했다.
-- `membership list` 이 프로젝트 멤버를 25명까지만 반환하던 문제. `limit` 을 아예 보내지 않아 Redmine 의 기본 페이지 크기 25가 그대로 적용됐고, 그 이상은 꺼낼 방법이 없었다. `--limit` (기본 25) 과 `--offset` (기본 0) 을 추가해 `issues` / `projects` 와 같은 형태로 맞췄다. 멤버가 59명인 프로젝트에서 `--limit 100` 으로 59명을 모두 받는 것을 확인했다.
+- `time-entry list` 와 `users` 에 `--offset` 이 없어 첫 페이지 뒤를 볼 수 없던 문제. 작업시간이 5만 건 넘게 쌓인 서버에서도 앞의 25건만 꺼낼 수 있었다.
+- `membership list` 가 프로젝트 멤버를 25명까지만 반환하던 문제. `--limit` 과 `--offset` 을 추가했다. 관리자가 아닌 계정은 사용자 검색 API 가 막혀 있어 프로젝트 멤버 목록이 사람의 ID 를 찾는 유일한 경로인데, 그 목록이 조용히 잘리고 있었다. (c665138)
+- `query` 가 저장된 쿼리를 25개까지만 반환하던 문제. 같은 방식으로 `--limit` 과 `--offset` 을 추가했다. (d285295)
+
+### Changed
+- 목록 명령의 `--limit` / `--offset` 도움말을 채웠다. Redmine 이 `limit` 을 100 으로 제한한다는 점을 `--help` 에서 바로 확인할 수 있다.
+- `Command::Query` 가 인자를 받는 형태로 바뀌었고, `client::list_memberships` / `client::list_queries` / `client::search_users` 에 페이지 인자가 추가됐다. **라이브러리 사용자 영향.**
 
 ## [0.4.1] - 2026-08-29
 ### Changed

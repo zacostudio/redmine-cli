@@ -1175,6 +1175,8 @@ async fn membership_list_returns_json() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/projects/demo/memberships.json"))
+        .and(query_param("limit", "25"))
+        .and(query_param("offset", "0"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "memberships": [
                 {
@@ -1409,6 +1411,8 @@ async fn query_list_returns_json() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/queries.json"))
+        .and(query_param("limit", "25"))
+        .and(query_param("offset", "0"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "queries": [
                 {"id": 1, "name": "Open bugs", "is_public": true},
@@ -1738,4 +1742,63 @@ async fn attachment_download_rejects_foreign_host() {
         !out_path.exists(),
         "output file must not be created when host check fails"
     );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn time_entry_list_forwards_offset() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/time_entries.json"))
+        .and(query_param("limit", "100"))
+        .and(query_param("offset", "200"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "time_entries": [{"id": 3, "hours": 1.5}],
+            "total_count": 51369
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
+        .args(["time-entry", "list", "--limit", "100", "--offset", "200"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["total_count"], 51369);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn users_search_forwards_offset() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/users.json"))
+        .and(query_param("name", "kim"))
+        .and(query_param("limit", "100"))
+        .and(query_param("offset", "100"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "users": [{"id": 12, "login": "kim", "firstname": "K", "lastname": "Kim"}],
+            "total_count": 300
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
+        .args([
+            "users", "--name", "kim", "--limit", "100", "--offset", "100",
+        ])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["total_count"], 300);
 }

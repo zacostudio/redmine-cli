@@ -611,3 +611,29 @@ fn custom_field_flags_explain_alias_resolution() {
         );
     }
 }
+
+#[test]
+fn parses_time_entry_list_with_paging() {
+    let cli = parse(&["time-entry", "list", "--limit", "100", "--offset", "200"]);
+    match cli.command {
+        Command::TimeEntry(redmine_cli::cli::time_entries::TimeEntryCommand::List(a)) => {
+            assert_eq!(a.limit, 100);
+            assert_eq!(a.offset, 200);
+        }
+        _ => panic!("expected TimeEntry::List"),
+    }
+}
+
+#[test]
+fn parses_users_with_paging() {
+    let cli = parse(&[
+        "users", "--name", "kim", "--limit", "100", "--offset", "100",
+    ]);
+    match cli.command {
+        Command::Users(a) => {
+            assert_eq!(a.limit, 100);
+            assert_eq!(a.offset, 100);
+        }
+        _ => panic!("expected Users"),
+    }
+}
