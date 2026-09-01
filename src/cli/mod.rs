@@ -158,7 +158,7 @@ pub enum Command {
     #[command(subcommand)]
     File(files::FileCommand),
     /// List saved issue queries (read-only via REST API).
-    Query,
+    Query(queries::QueryArgs),
     /// Wiki pages: list/show/create/update/delete.
     #[command(subcommand)]
     Wiki(wiki::WikiCommand),
@@ -242,7 +242,7 @@ fn dispatch(cmd: Command, client: &RedmineClient, cfg: &Config) {
         Command::Membership(sub) => memberships::handle(sub, client),
         Command::News(sub) => news::handle(sub, client),
         Command::File(sub) => files::handle(sub, client),
-        Command::Query => queries::handle(client),
+        Command::Query(a) => queries::handle(a, client),
         Command::Wiki(sub) => wiki::handle(sub, client),
         Command::Group(sub) => groups::handle(sub, client),
         Command::MyAccount(sub) => my_account::handle(sub, client),

@@ -47,10 +47,39 @@ TDD 로 진행했다. `cli_parse.rs` 의 파싱 테스트 2개는 `ListArgs` 에
 구현 후 전체 106개 테스트 통과, clippy `-D warnings` 통과, fmt 통과.
 실제 서버 확인: 기본은 25/59, `--limit 100` 은 59/59. `--offset 5` 는 6번째 멤버부터 반환된다.
 
+## 2026-09-01 나머지 목록 API 전수 확인
+
+첫 조사에서 `grep '&\[\],'` 로 훑었더니 뒤에 쉼표가 없는 `list_queries` 를 놓쳤다.
+**패턴 grep 은 이 용도로 신뢰할 수 없다.** 대신 두 단계로 가렸다.
+
+1. 응답 타입에 `total_count` 필드가 있는데 client 함수가 파라미터를 빈 배열로 보내는 것을 찾는다.
+   Redmine 은 페이지네이션하는 엔드포인트에만 `total_count` 를 준다.
+2. 후보를 실제 서버에 `?limit=1` 로 찔러 본다. **1건이 오면 페이지네이션, 전부 오면 아니다.**
+
+결과 (rsupport 실측):
+
+| 엔드포인트 | `limit=1` 응답 | 판정 |
+|---|---|---|
+| `/queries.json` | 1 / total_count 186 | **페이지네이션 — 버그였음** |
+| `/projects/:id/versions.json` | 3 / total_count 3 | 아님 (limit 무시) |
+| `/projects/:id/issue_categories.json` | 8 / total_count 8 | 아님 (limit 무시) |
+| `/projects/:id/files.json` | 7, total_count 키 없음 | 아님 |
+| `/projects/:id/wiki/index.json` | total_count 키 없음 | 아님 |
+
+`versions` 와 `issue_categories` 는 응답에 `total_count` 가 있어서 1단계 후보로 잡혔지만,
+`limit=1` 에 각각 3건과 8건을 돌려주므로 limit 을 아예 보지 않는다. **`total_count` 존재만으로는
+판정할 수 없고 2단계 확인이 반드시 필요하다.**
+
+`files` 는 프로젝트 2539 가 403 이라 파일이 있는 212 로 확인했다.
+
+## 2026-09-01 query 수정
+
+`redmine query` 가 저장된 쿼리 186개 중 25개만 반환하고 있었다. `membership list` 와 같은 원인,
+같은 처방이다. `Command::Query` 가 인자 없는 unit variant 였으므로 `QueryArgs` 를 새로 만들어
+붙였다.
+
+실측: 기본 25/186, `--limit 100` 은 100건, `--limit 100 --offset 100` 은 86건 (100+86=186).
+
 ## 남은 것
 
-같은 형태로 쿼리 파라미터를 빈 배열로 보내는 목록 함수가 둘 더 있다 —
-`list_files` (`src/client.rs:520`) 와 `list_wiki_pages` (`src/client.rs:542`).
-다만 이 두 엔드포인트가 Redmine 쪽에서 실제로 페이지네이션되는지는 **확인하지 않았다.**
-(wiki index 는 전체를 반환한다고 알려져 있으나 검증 전이다.) 같은 증상이 있는지 보려면
-`total_count` 와 반환 건수를 비교해 보면 된다.
+없다. 목록을 반환하는 client 함수는 전부 확인했다.

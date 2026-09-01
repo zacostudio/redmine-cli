@@ -335,7 +335,25 @@ fn parses_file_upload() {
 #[test]
 fn parses_query() {
     let cli = parse(&["query"]);
-    assert!(matches!(cli.command, Command::Query));
+    match cli.command {
+        Command::Query(a) => {
+            assert_eq!(a.limit, 25);
+            assert_eq!(a.offset, 0);
+        }
+        _ => panic!("expected Query"),
+    }
+}
+
+#[test]
+fn parses_query_with_limit_and_offset() {
+    let cli = parse(&["query", "--limit", "100", "--offset", "50"]);
+    match cli.command {
+        Command::Query(a) => {
+            assert_eq!(a.limit, 100);
+            assert_eq!(a.offset, 50);
+        }
+        _ => panic!("expected Query"),
+    }
 }
 
 #[test]

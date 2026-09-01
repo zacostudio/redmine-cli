@@ -1376,6 +1376,35 @@ async fn file_list_returns_json() {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn query_list_forwards_limit_and_offset() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/queries.json"))
+        .and(query_param("limit", "100"))
+        .and(query_param("offset", "50"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "queries": [{"id": 9, "name": "My open issues", "is_public": true, "project_id": null}],
+            "total_count": 186
+        })))
+        .mount(&server)
+        .await;
+
+    let assert = Command::cargo_bin("redmine")
+        .unwrap()
+        .arg("--server-url")
+        .arg(server.uri())
+        .args(["--api-token", "secret"])
+        .args(["query", "--limit", "100", "--offset", "50"])
+        .assert()
+        .success();
+
+    let stdout = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let v: Value = serde_json::from_str(stdout.trim()).expect("valid json");
+    assert_eq!(v["total_count"], 186);
+    assert_eq!(v["queries"][0]["name"], "My open issues");
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn query_list_returns_json() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))

@@ -535,8 +535,11 @@ impl RedmineClient {
         )
     }
 
-    pub fn list_queries(&self) -> Result<QueriesResponse, ClientError> {
-        self.get("/queries.json", &[])
+    pub fn list_queries(&self, limit: u64, offset: u64) -> Result<QueriesResponse, ClientError> {
+        self.get(
+            "/queries.json",
+            &[("limit", limit.to_string()), ("offset", offset.to_string())],
+        )
     }
 
     pub fn list_wiki_pages(&self, project: &str) -> Result<WikiIndexResponse, ClientError> {
