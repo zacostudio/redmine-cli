@@ -3,8 +3,8 @@ use clap::{Args, Subcommand};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
-use crate::client::RedmineClient;
 use crate::output;
+use redmine_services::client::RedmineClient;
 
 #[derive(Subcommand, Debug)]
 pub enum AttachmentCommand {

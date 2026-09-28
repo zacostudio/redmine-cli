@@ -1,8 +1,8 @@
 // statuses / trackers / priorities 서브커맨드 핸들러.
 use serde_json::json;
 
-use crate::client::RedmineClient;
 use crate::output;
+use redmine_services::client::RedmineClient;
 
 pub fn statuses(client: &RedmineClient) {
     match client.list_statuses() {

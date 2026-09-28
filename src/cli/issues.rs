@@ -3,9 +3,9 @@ use clap::{Args, Subcommand};
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use crate::client::RedmineClient;
 use crate::config::{self, Config};
 use crate::output;
+use redmine_services::client::RedmineClient;
 
 // ── issues (search) ─────────────────────────────────────────────────
 

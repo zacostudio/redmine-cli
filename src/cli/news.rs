@@ -2,9 +2,9 @@
 use clap::{Args, Subcommand};
 use serde_json::{json, Value};
 
-use crate::client::RedmineClient;
 use crate::output;
-use crate::types::RedmineNews;
+use redmine_services::client::RedmineClient;
+use redmine_services::types::RedmineNews;
 
 #[derive(Subcommand, Debug)]
 pub enum NewsCommand {

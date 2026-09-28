@@ -2,8 +2,8 @@
 use clap::Args;
 use serde_json::json;
 
-use crate::client::RedmineClient;
 use crate::output;
+use redmine_services::client::RedmineClient;
 
 #[derive(Args, Debug)]
 pub struct SearchArgs {

@@ -1,8 +1,8 @@
 // query 서브커맨드 핸들러 (저장된 이슈 쿼리, REST 는 read-only).
 use serde_json::json;
 
-use crate::client::RedmineClient;
 use crate::output;
+use redmine_services::client::RedmineClient;
 
 pub fn handle(client: &RedmineClient) {
     match client.list_queries() {

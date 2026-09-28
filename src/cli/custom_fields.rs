@@ -1,8 +1,8 @@
 // custom-fields 서브커맨드 핸들러 (admin 전용 메타데이터 조회).
 use serde_json::json;
 
-use crate::client::RedmineClient;
 use crate::output;
+use redmine_services::client::RedmineClient;
 
 pub fn handle(client: &RedmineClient) {
     match client.list_custom_fields() {

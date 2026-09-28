@@ -7,6 +7,18 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-28
+### Changed
+- Redmine client 와 응답 타입을 사내 crate `redmine-services` 0.1.0 으로 옮겼다. Tome 앱과 같은 client·타입을 쓴다 (Tome #762). TLS 는 그대로 rustls 다.
+- `issue <id>` 등 일감 JSON 에 필드가 늘었다 — `total_spent_hours`, journal 의 `details`, 프로젝트의 `parent`, custom field 의 `multiple` 이 실린다.
+- `rust-version` 을 1.85 로 올렸다 (crate 가 edition 2024).
+
+### Fixed
+- 여러 값을 받는 custom field(`multiple`)가 붙은 일감을 읽으면 파싱 에러가 나던 것을 고쳤다. 값은 배열로 나온다.
+
+### Removed
+- `urlencoding` 직접 의존 (crate 가 쓴다).
+
 ## [0.4.1] - 2026-08-29
 ### Changed
 - **BREAKING**: 설정 파일 위치를 macOS 에서도 `~/.config/redmine-cli/config.yml` 로 통일했다. 0.4.0 까지는 macOS 표준인 `~/Library/Application Support/` 를 썼는데, 같은 도구의 설정이 기계마다 다른 곳에 놓여 손으로 열어 보거나 dotfiles 로 관리하기 번거로웠다. `XDG_CONFIG_HOME` 이 설정돼 있으면 그 아래를 쓴다.

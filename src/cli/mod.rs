@@ -22,9 +22,9 @@ pub mod users;
 pub mod versions;
 pub mod wiki;
 
-use crate::client::RedmineClient;
 use crate::config::{self, CliOverrides, Config};
 use crate::output;
+use redmine_services::client::RedmineClient;
 
 /// `--help` 아래에 붙는 설정 요약. 사람도 보지만 이 CLI 를 호출하는 AI 가
 /// 설정 구조를 물어보지 않고 파악할 수 있게 하는 것이 주 목적이다.

@@ -1,8 +1,8 @@
 // roles 서브커맨드 핸들러 (단순 enum 목록).
 use serde_json::json;
 
-use crate::client::RedmineClient;
 use crate::output;
+use redmine_services::client::RedmineClient;
 
 pub fn handle(client: &RedmineClient) {
     match client.list_roles() {

@@ -2,9 +2,9 @@
 use clap::{Args, Subcommand};
 use serde_json::{json, Value};
 
-use crate::client::RedmineClient;
 use crate::output;
-use crate::types::RedmineGroup;
+use redmine_services::client::RedmineClient;
+use redmine_services::types::RedmineGroup;
 
 #[derive(Subcommand, Debug)]
 pub enum GroupCommand {
