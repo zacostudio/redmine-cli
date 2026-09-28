@@ -6,6 +6,9 @@ on:
 
 jobs:
   build:
+    env:
+      # redmine-services 는 사내 kellnr 에만 있다. registry 주소는 .cargo/config.toml.
+      CARGO_REGISTRIES_KELLNR_TOKEN: ${{ secrets.KELLNR_TOKEN }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false

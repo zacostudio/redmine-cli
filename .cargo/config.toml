@@ -1,0 +1,6 @@
+# redmine-services 를 받는 사내 registry(kellnr). 토큰은 CARGO_REGISTRIES_KELLNR_TOKEN 환경변수로 받는다.
+[registry]
+global-credential-providers = ["cargo:token"]
+
+[registries.kellnr]
+index = "sparse+https://crates.zacostudio.com/api/v1/crates/"
