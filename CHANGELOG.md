@@ -6,6 +6,9 @@
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 ## [Unreleased]
+### Security
+- 의존성의 보안 권고 9건을 해결했다(`cargo audit` 0건). rustls 0.23.40 → 0.23.46 (RUSTSEC-2026-0285/0346/0348/0349), rustls-webpki 0.103.13 → 0.103.16 (RUSTSEC-2026-0382), webpki-roots 1.0.7 → 1.0.11 (RUSTSEC-2026-0381), quinn-proto 0.11.17 → 0.11.19 (RUSTSEC-2026-0338/0340/0343). unsound 경고가 있던 tokio 도 1.52.3 → 1.54.1 로 올렸다 (RUSTSEC-2026-0386).
+
 ### Fixed
 - `time-entry list` 와 `users` 에 `--offset` 이 없어 첫 페이지 뒤를 볼 수 없던 문제. 작업시간이 5만 건 넘게 쌓인 서버에서도 앞의 25건만 꺼낼 수 있었다.
 - `membership list` 가 프로젝트 멤버를 25명까지만 반환하던 문제. `--limit` 과 `--offset` 을 추가했다. 관리자가 아닌 계정은 사용자 검색 API 가 막혀 있어 프로젝트 멤버 목록이 사람의 ID 를 찾는 유일한 경로인데, 그 목록이 조용히 잘리고 있었다. (c665138)
