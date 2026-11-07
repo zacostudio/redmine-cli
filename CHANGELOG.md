@@ -6,6 +6,8 @@
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 ## [Unreleased]
+
+## [0.4.2] - 2026-11-07
 ### Security
 - 의존성의 보안 권고 9건을 해결했다(`cargo audit` 0건). rustls 0.23.40 → 0.23.46 (RUSTSEC-2026-0285/0346/0348/0349), rustls-webpki 0.103.13 → 0.103.16 (RUSTSEC-2026-0382), webpki-roots 1.0.7 → 1.0.11 (RUSTSEC-2026-0381), quinn-proto 0.11.17 → 0.11.19 (RUSTSEC-2026-0338/0340/0343). unsound 경고가 있던 tokio 도 1.52.3 → 1.54.1 로 올렸다 (RUSTSEC-2026-0386).
 
@@ -118,7 +120,8 @@
 - 설정 우선순위(플래그 > 환경변수 > TOML)와 커스텀 필드 alias 파서.
 - macOS(aarch64/x86_64) 및 Linux(x86_64)용 바이너리 릴리스 워크플로우.
 
-[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/zacostudio/redmine-cli/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/zacostudio/redmine-cli/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/zacostudio/redmine-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/zacostudio/redmine-cli/compare/v0.2.0...v0.3.0
