@@ -15,6 +15,8 @@
 - `query` 가 저장된 쿼리를 25개까지만 반환하던 문제. 같은 방식으로 `--limit` 과 `--offset` 을 추가했다. (d285295)
 
 ### Changed
+- reqwest 0.12 → 0.13, thiserror 1 → 2. reqwest 는 `rustls-tls` feature 가 `rustls` 로 바뀌었고 `query` 가 별도 feature 로 빠져 함께 지정했다.
+- HTTPS 인증서 검증이 내장 Mozilla 루트(webpki-roots)에서 OS 신뢰 저장소(macOS 키체인 등, rustls-platform-verifier)로 바뀌었다. 사내 CA 를 OS 에 등록해 둔 서버도 별도 설정 없이 접속된다. TLS 암호 백엔드는 ring 에서 aws-lc-rs 로 바뀌었다.
 - 목록 명령의 `--limit` / `--offset` 도움말을 채웠다. Redmine 이 `limit` 을 100 으로 제한한다는 점을 `--help` 에서 바로 확인할 수 있다.
 - `Command::Query` 가 인자를 받는 형태로 바뀌었고, `client::list_memberships` / `client::list_queries` / `client::search_users` 에 페이지 인자가 추가됐다. **라이브러리 사용자 영향.**
 
