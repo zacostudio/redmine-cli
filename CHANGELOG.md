@@ -6,6 +6,8 @@
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 ## [Unreleased]
+### Security
+- url 2.5.8 → 2.5.9 (RUSTSEC-2026-0592: 중첩된 `blob:` URL 에서 `Url::origin()` 이 stack overflow). 호환 범위 의존성 29건도 함께 올렸다.
 
 ## [0.4.3] - 2026-11-07
 ### Fixed
