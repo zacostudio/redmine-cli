@@ -6,6 +6,8 @@
 버전은 [Semantic Versioning](https://semver.org/lang/ko/)을 따릅니다.
 
 ## [Unreleased]
+
+## [0.4.4] - 2026-11-26
 ### Security
 - url 2.5.8 → 2.5.9 (RUSTSEC-2026-0592: 중첩된 `blob:` URL 에서 `Url::origin()` 이 stack overflow). 호환 범위 의존성 28건도 함께 올렸다.
 
@@ -126,7 +128,8 @@
 - 설정 우선순위(플래그 > 환경변수 > TOML)와 커스텀 필드 alias 파서.
 - macOS(aarch64/x86_64) 및 Linux(x86_64)용 바이너리 릴리스 워크플로우.
 
-[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/zacostudio/redmine-cli/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/zacostudio/redmine-cli/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/zacostudio/redmine-cli/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/zacostudio/redmine-cli/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/zacostudio/redmine-cli/compare/v0.4.0...v0.4.1
